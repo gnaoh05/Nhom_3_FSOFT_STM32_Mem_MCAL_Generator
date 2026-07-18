@@ -1,0 +1,16 @@
+/* ========================================================================== */
+/* FLASH IP HARDWARE CONFIGURATION (STM32F401RE)                              */
+/* ========================================================================== */
+#ifndef FLASH_IP_CFG_H
+#define FLASH_IP_CFG_H
+
+#include "Std_Types.h"
+
+/* Thong so vat ly cua Flash STM32F401RE */
+#define FLASH_IP_START_ADDRESS       ({{ MemStartAddress }}U)
+#define FLASH_IP_NUMBER_OF_SECTORS   ({{ MemNumberOfSectors }}U)
+#define FLASH_IP_ERASE_SECTOR_SIZE   ({{ MemEraseSectorSize }}U)
+#define FLASH_IP_WRITE_PAGE_SIZE     ({{ MemWritePageSize }}U)
+#define FLASH_IP_MIN_READ_SIZE       ({{ MemMinReadSize }}U)
+
+#endif /* FLASH_IP_CFG_H */
