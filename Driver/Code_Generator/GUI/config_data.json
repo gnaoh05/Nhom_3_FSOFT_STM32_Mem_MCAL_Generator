@@ -2,7 +2,7 @@
     "MemDevErrorDetect": "STD_ON",
     "MemInstanceId": "0",
     "MemStartAddress": "0x08000000",
-    "MemNumberOfSectors": "64",
+    "MemNumberOfSectors": "32",
     "MemEraseSectorSize": "2048",
     "MemWritePageSize": "4",
     "MemMinReadSize": "1"

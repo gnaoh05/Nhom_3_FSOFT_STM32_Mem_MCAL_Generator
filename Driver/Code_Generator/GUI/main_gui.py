@@ -8,7 +8,7 @@ from jinja2 import Environment, FileSystemLoader
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 JSON_FILE_PATH = os.path.join(BASE_DIR, "config_data.json")
 TEMPLATE_DIR = os.path.join(BASE_DIR, "../templates")
-OUTPUT_DIR = os.path.join(BASE_DIR, "../../Test/Generated_File")
+OUTPUT_DIR = os.path.join(BASE_DIR, "../../../Test/Generated_File")
 
 class AUTOSAR_CodeGen_Tool:
     def __init__(self, root):
