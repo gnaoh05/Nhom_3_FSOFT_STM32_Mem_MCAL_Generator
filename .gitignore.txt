@@ -1,0 +1,18 @@
+# Build folders & Compiled files
+build/
+Debug/
+Release/
+*.o
+*.elf
+*.bin
+*.hex
+*.map
+*.d
+
+# VS Code temporary files
+.vscode/*.log
+*.tmp
+
+# Windows system files
+Thumbs.db
+Desktop.ini
