@@ -10,11 +10,12 @@ RM := rm -rf
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include Test/Stub/Det/subdir.mk
--include Drivers/STM32F4xx_HAL_Driver/Src/subdir.mk
+-include Test/STM32F401/Drivers/STM32F4xx_HAL_Driver/Src/subdir.mk
+-include Test/STM32F401/Core/Startup/subdir.mk
+-include Test/STM32F401/Core/Src/subdir.mk
+-include Test/Core/subdir.mk
 -include Driver/src/subdir.mk
 -include Driver/Code_Generator/templates/src/subdir.mk
--include Core/Startup/subdir.mk
--include Core/Src/subdir.mk
 -include objects.mk
 
 ifneq ($(MAKECMDGOALS),clean)

@@ -10,6 +10,9 @@
 		<item key="WizardFileSystemResourceImportPage1.STORE_OVERWRITE_EXISTING_RESOURCES_ID" value="false"/>
 		<item key="WizardFileSystemResourceImportPage1.STORE_CREATE_CONTAINER_STRUCTURE_ID" value="false"/>
 		<list key="WizardFileSystemResourceImportPage1.STORE_SOURCE_NAMES_ID">
+			<item value="C:\Users\ZEPHYRUS M16\Documents\Intergration\AUTOSAR_MEM"/>
+			<item value="C:\Users\ZEPHYRUS M16\Documents\Intergration\AUTOSAR_MEM\Core"/>
+			<item value="C:\Users\ZEPHYRUS M16\Documents\Intergration\AUTOSAR_MEM\Drivers\CMSIS"/>
 			<item value="C:\Users\ZEPHYRUS M16\Downloads\Nhom_3_FSOFT_STM32_Mem_MCAL_Generator-main\Nhom_3_FSOFT_STM32_Mem_MCAL_Generator-main"/>
 			<item value="C:\Users\ZEPHYRUS M16\Downloads\Nhom_3_FSOFT_STM32_Mem_MCAL_Generator-main\Nhom_3_FSOFT_STM32_Mem_MCAL_Generator-main\Test"/>
 		</list>

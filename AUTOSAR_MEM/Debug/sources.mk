@@ -22,10 +22,11 @@ C_DEPS :=
 
 # Every subdirectory with source files must be described here
 SUBDIRS := \
-Core/Src \
-Core/Startup \
 Driver/Code_Generator/templates/src \
 Driver/src \
-Drivers/STM32F4xx_HAL_Driver/Src \
+Test/Core \
+Test/STM32F401/Core/Src \
+Test/STM32F401/Core/Startup \
+Test/STM32F401/Drivers/STM32F4xx_HAL_Driver/Src \
 Test/Stub/Det \
 
