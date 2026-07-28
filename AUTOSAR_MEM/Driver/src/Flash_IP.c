@@ -61,6 +61,19 @@
 #define FLASH_CR_LOCK          (1UL << 31)
 #endif
 
+#ifndef FLASH_ACR_ICEN
+#define FLASH_ACR_ICEN         (1UL << 9)
+#endif
+#ifndef FLASH_ACR_DCEN
+#define FLASH_ACR_DCEN         (1UL << 10)
+#endif
+#ifndef FLASH_ACR_ICRST
+#define FLASH_ACR_ICRST        (1UL << 11)
+#endif
+#ifndef FLASH_ACR_DCRST
+#define FLASH_ACR_DCRST        (1UL << 12)
+#endif
+
 #ifndef FLASH_SR_EOP
 #define FLASH_SR_EOP           (1UL << 0)
 #endif
@@ -134,6 +147,18 @@ static void Flash_IP_ClearAllFlags(void)
 {
     /* FLASH_SR error/EOP bits are rc_w1 (cleared by writing 1) */
     FLASH->SR = FLASH_IP_SR_ALL_CLEAR_FLAGS;
+}
+
+/* RM0368 3.5.5 notes that erase can leave stale entries in the flash I/D caches. Reset the caches only
+ * after temporarily disabling them, then restore the previous enable state. */
+static void Flash_IP_RefreshCachesAfterErase(void)
+{
+    uint32 cacheEnableMask = FLASH->ACR & (FLASH_ACR_ICEN | FLASH_ACR_DCEN);
+
+    FLASH->ACR &= ~(FLASH_ACR_ICEN | FLASH_ACR_DCEN);
+    FLASH->ACR |= FLASH_ACR_ICRST | FLASH_ACR_DCRST;
+    FLASH->ACR &= ~(FLASH_ACR_ICRST | FLASH_ACR_DCRST);
+    FLASH->ACR |= cacheEnableMask;
 }
 
 /* Triggers programming of exactly one byte at Flash_IP_ProgAddress from *Flash_IP_ProgSrcPtr.
@@ -349,6 +374,7 @@ void FLASH_IRQHandler(void)
         {
             FLASH->CR &= ~(FLASH_CR_SER | FLASH_CR_SNB | FLASH_CR_EOPIE | FLASH_CR_ERRIE);
             Flash_IP_Lock();
+            Flash_IP_RefreshCachesAfterErase();
 
             Flash_IP_Status    = FLASH_IP_OK;
             Flash_IP_CurrentOp = FLASH_IP_OP_NONE;

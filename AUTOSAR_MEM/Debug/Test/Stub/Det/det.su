@@ -1,1 +1,4 @@
-../Test/Stub/Det/det.c:29:16:Det_ReportError	16	static
+../Test/Stub/Det/det.c:22:16:Det_ReportError	16	static
+../Test/Stub/Det/det.c:39:6:Det_ResetLastError	4	static
+../Test/Stub/Det/det.c:48:19:Det_GetLastError	24	static
+../Test/Stub/Det/det.c:61:9:Det_HasError	4	static

@@ -27,6 +27,6 @@ Driver/src \
 Test/Core \
 Test/STM32F401/Core/Src \
 Test/STM32F401/Core/Startup \
-Test/STM32F401/Drivers/STM32F4xx_HAL_Driver/Src \
 Test/Stub/Det \
+Test/Testcase \
 

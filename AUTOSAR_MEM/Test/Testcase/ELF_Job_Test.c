@@ -1,0 +1,281 @@
+/******************************************************************************
+ * FILE: ELF_Job_Test.c
+ * DESCRIPTION: Job-control tests for the AUTOSAR Mem driver
+ ******************************************************************************/
+
+#include "ELF_Job_Test.h"
+#include "TestManager.h"
+
+/* Traceability:
+ * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_00057], [SWS_Mem_00059], [SWS_Mem_00007], [SWS_Mem_10012], p.14-15,36
+ * - Verifies a second job request is rejected while the first job is still pending.
+ */
+static void ELF_JOB_001(void)
+{
+    Mem_DataType   readBufferA[8];
+    Mem_DataType   readBufferB[8];
+    Std_ReturnType firstRetVal;
+    Std_ReturnType secondRetVal;
+
+    TestManager_PrepareDriver();
+    TestManager_ResetDetState();
+
+    firstRetVal = Mem_Read(TEST_FLASH_INSTANCE, (Mem_AddressType)FLASH_IP_BASE_ADDRESS, readBufferA, (Mem_LengthType)sizeof(readBufferA));
+    secondRetVal = Mem_Read(TEST_FLASH_INSTANCE, (Mem_AddressType)FLASH_IP_BASE_ADDRESS, readBufferB, (Mem_LengthType)sizeof(readBufferB));
+
+    TestManager_RecordCaseTrace(0x0801u, "RejectSecondPendingJob",
+                                "SWS_Mem_00057,SWS_Mem_00059,SWS_Mem_00007,SWS_Mem_10012",
+                                "p.14-15,36",
+                                (boolean)((firstRetVal == E_OK) &&
+                                          (secondRetVal == E_NOT_OK) &&
+                                          (TestManager_CheckDet(MEM_SID_READ, MEM_E_JOB_PENDING) == TRUE)),
+                                (uint32)E_NOT_OK,
+                                (uint32)secondRetVal);
+
+    (void)TestManager_ExecuteMainUntilDone(TEST_FLASH_INSTANCE, TEST_MAINFUNCTION_TIMEOUT);
+}
+
+/* Traceability:
+ * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10015], [SWS_Mem_00061], p.35
+ * - Verifies Mem_PropagateError() cancels the current job and sets MEM_ECC_UNCORRECTED.
+ */
+static void ELF_JOB_002(void)
+{
+    Mem_DataType            readBuffer[8];
+    Std_ReturnType          retVal;
+    MemAcc_MemJobResultType jobResult;
+
+    TestManager_PrepareDriver();
+    retVal = Mem_Read(TEST_FLASH_INSTANCE, (Mem_AddressType)FLASH_IP_BASE_ADDRESS, readBuffer, (Mem_LengthType)sizeof(readBuffer));
+
+    if (retVal == E_OK)
+    {
+        Mem_PropagateError(TEST_FLASH_INSTANCE);
+    }
+
+    jobResult = Mem_GetJobResult(TEST_FLASH_INSTANCE);
+
+    TestManager_RecordCaseTrace(0x0802u, "PropagateErrorCancelsJob",
+                                "SWS_Mem_10015,SWS_Mem_00061",
+                                "p.35",
+                                (boolean)((retVal == E_OK) && (jobResult == MEM_ECC_UNCORRECTED)),
+                                (uint32)MEM_ECC_UNCORRECTED,
+                                (uint32)jobResult);
+}
+
+/* Traceability:
+ * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00070], p.23,41
+ * - Verifies an unsupported hardware-specific service returns E_MEM_SERVICE_NOT_AVAIL.
+ */
+static void ELF_JOB_003(void)
+{
+    Mem_DataType   dataBuffer[4] = { 0u, 0u, 0u, 0u };
+    Mem_LengthType length = (Mem_LengthType)sizeof(dataBuffer);
+    Std_ReturnType retVal;
+
+    TestManager_PrepareDriver();
+    retVal = Mem_HwSpecificService(TEST_FLASH_INSTANCE, 0u, dataBuffer, &length);
+
+    TestManager_RecordCaseTrace(0x0803u, "HwSpecificServiceNotAvailable",
+                                "SWS_Mem_10017,SWS_Mem_00070",
+                                "p.23,41",
+                                (boolean)(retVal == E_MEM_SERVICE_NOT_AVAIL),
+                                (uint32)E_MEM_SERVICE_NOT_AVAIL,
+                                (uint32)retVal);
+}
+
+/* Traceability:
+ * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10024], [SWS_Mem_00082], p.16,33
+ * - Verifies Mem_Suspend() returns E_MEM_SERVICE_NOT_AVAIL when the memory technology has no suspend support.
+ */
+static void ELF_JOB_004(void)
+{
+    Std_ReturnType retVal;
+
+    TestManager_PrepareDriver();
+    retVal = Mem_Suspend(TEST_FLASH_INSTANCE);
+
+    TestManager_RecordCaseTrace(0x0804u, "SuspendNotAvailable",
+                                "SWS_Mem_10024,SWS_Mem_00082",
+                                "p.16,33",
+                                (boolean)(retVal == E_MEM_SERVICE_NOT_AVAIL),
+                                (uint32)E_MEM_SERVICE_NOT_AVAIL,
+                                (uint32)retVal);
+}
+
+/* Traceability:
+ * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10025], [SWS_Mem_00082], p.16,34
+ * - Verifies Mem_Resume() returns E_MEM_SERVICE_NOT_AVAIL when the memory technology has no resume support.
+ */
+static void ELF_JOB_005(void)
+{
+    Std_ReturnType retVal;
+
+    TestManager_PrepareDriver();
+    retVal = Mem_Resume(TEST_FLASH_INSTANCE);
+
+    TestManager_RecordCaseTrace(0x0805u, "ResumeNotAvailable",
+                                "SWS_Mem_10025,SWS_Mem_00082",
+                                "p.16,34",
+                                (boolean)(retVal == E_MEM_SERVICE_NOT_AVAIL),
+                                (uint32)E_MEM_SERVICE_NOT_AVAIL,
+                                (uint32)retVal);
+}
+
+/* Traceability:
+ * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10015], [SWS_Mem_00020], p.35
+ * - Verifies Mem_PropagateError() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ */
+static void ELF_JOB_006(void)
+{
+    MemAcc_MemJobResultType jobResult;
+    boolean                 passed;
+
+    TestManager_PrepareDriver();
+    TestManager_ResetDetState();
+
+    Mem_PropagateError(TEST_FLASH_INVALID_INSTANCE);
+    jobResult = Mem_GetJobResult(TEST_FLASH_INSTANCE);
+    passed = (boolean)((jobResult == MEM_JOB_OK) &&
+                       (TestManager_CheckDet(MEM_SID_PROPAGATE_ERROR, MEM_E_PARAM_INSTANCE_ID) == TRUE));
+
+    TestManager_RecordCaseTrace(0x0806u, "PropagateErrorInvalidInstance",
+                                "SWS_Mem_10015,SWS_Mem_00020",
+                                "p.35",
+                                passed,
+                                (uint32)MEM_JOB_OK,
+                                (uint32)jobResult);
+}
+
+/* Traceability:
+ * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00026], p.41-42
+ * - Verifies Mem_HwSpecificService() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ */
+static void ELF_JOB_007(void)
+{
+    Mem_DataType   dataBuffer[4] = { 0u, 0u, 0u, 0u };
+    Mem_LengthType length = (Mem_LengthType)sizeof(dataBuffer);
+    Std_ReturnType retVal;
+
+    TestManager_PrepareDriver();
+    TestManager_ResetDetState();
+
+    retVal = Mem_HwSpecificService(TEST_FLASH_INVALID_INSTANCE, 0u, dataBuffer, &length);
+
+    TestManager_RecordCaseTrace(0x0807u, "HwSpecificRejectsInvalidInstance",
+                                "SWS_Mem_10017,SWS_Mem_00026",
+                                "p.41-42",
+                                (boolean)((retVal == E_NOT_OK) &&
+                                          (TestManager_CheckDet(MEM_SID_HW_SPECIFIC_SERVICE, MEM_E_PARAM_INSTANCE_ID) == TRUE)),
+                                (uint32)E_NOT_OK,
+                                (uint32)retVal);
+}
+
+/* Traceability:
+ * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00027], p.41-42
+ * - Verifies Mem_HwSpecificService() rejects a NULL data pointer with MEM_E_PARAM_POINTER.
+ */
+static void ELF_JOB_008(void)
+{
+    Mem_LengthType length = 4u;
+    Std_ReturnType retVal;
+
+    TestManager_PrepareDriver();
+    TestManager_ResetDetState();
+
+    retVal = Mem_HwSpecificService(TEST_FLASH_INSTANCE, 0u, NULL_PTR, &length);
+
+    TestManager_RecordCaseTrace(0x0808u, "HwSpecificRejectsNullDataPtr",
+                                "SWS_Mem_10017,SWS_Mem_00027",
+                                "p.41-42",
+                                (boolean)((retVal == E_NOT_OK) &&
+                                          (TestManager_CheckDet(MEM_SID_HW_SPECIFIC_SERVICE, MEM_E_PARAM_POINTER) == TRUE)),
+                                (uint32)E_NOT_OK,
+                                (uint32)retVal);
+}
+
+/* Traceability:
+ * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00027], p.41-42
+ * - Verifies Mem_HwSpecificService() rejects a NULL length pointer with MEM_E_PARAM_POINTER.
+ */
+static void ELF_JOB_009(void)
+{
+    Mem_DataType   dataBuffer[4] = { 0u, 0u, 0u, 0u };
+    Std_ReturnType retVal;
+
+    TestManager_PrepareDriver();
+    TestManager_ResetDetState();
+
+    retVal = Mem_HwSpecificService(TEST_FLASH_INSTANCE, 0u, dataBuffer, NULL_PTR);
+
+    TestManager_RecordCaseTrace(0x0809u, "HwSpecificRejectsNullLengthPtr",
+                                "SWS_Mem_10017,SWS_Mem_00027",
+                                "p.41-42",
+                                (boolean)((retVal == E_NOT_OK) &&
+                                          (TestManager_CheckDet(MEM_SID_HW_SPECIFIC_SERVICE, MEM_E_PARAM_POINTER) == TRUE)),
+                                (uint32)E_NOT_OK,
+                                (uint32)retVal);
+}
+
+/* Traceability:
+ * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10024], [SWS_Mem_00091], p.33
+ * - Verifies Mem_Suspend() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ */
+static void ELF_JOB_010(void)
+{
+    Std_ReturnType retVal;
+
+    TestManager_PrepareDriver();
+    TestManager_ResetDetState();
+
+    retVal = Mem_Suspend(TEST_FLASH_INVALID_INSTANCE);
+
+    TestManager_RecordCaseTrace(0x0810u, "SuspendRejectsInvalidInstance",
+                                "SWS_Mem_10024,SWS_Mem_00091",
+                                "p.33",
+                                (boolean)((retVal == E_NOT_OK) &&
+                                          (TestManager_CheckDet(MEM_SID_SUSPEND, MEM_E_PARAM_INSTANCE_ID) == TRUE)),
+                                (uint32)E_NOT_OK,
+                                (uint32)retVal);
+}
+
+/* Traceability:
+ * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10025], [SWS_Mem_00092], p.34
+ * - Verifies Mem_Resume() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ */
+static void ELF_JOB_011(void)
+{
+    Std_ReturnType retVal;
+
+    TestManager_PrepareDriver();
+    TestManager_ResetDetState();
+
+    retVal = Mem_Resume(TEST_FLASH_INVALID_INSTANCE);
+
+    TestManager_RecordCaseTrace(0x0811u, "ResumeRejectsInvalidInstance",
+                                "SWS_Mem_10025,SWS_Mem_00092",
+                                "p.34",
+                                (boolean)((retVal == E_NOT_OK) &&
+                                          (TestManager_CheckDet(MEM_SID_RESUME, MEM_E_PARAM_INSTANCE_ID) == TRUE)),
+                                (uint32)E_NOT_OK,
+                                (uint32)retVal);
+}
+
+void ELF_Job_Test(void)
+{
+    TestManager_BeginGroup(TEST_ELF_JOB);
+
+    ELF_JOB_001();
+    ELF_JOB_002();
+    ELF_JOB_003();
+    ELF_JOB_004();
+    ELF_JOB_005();
+    ELF_JOB_006();
+    ELF_JOB_007();
+    ELF_JOB_008();
+    ELF_JOB_009();
+    ELF_JOB_010();
+    ELF_JOB_011();
+
+    TestManager_EndGroup();
+}

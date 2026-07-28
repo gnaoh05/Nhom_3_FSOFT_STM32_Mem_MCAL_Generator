@@ -246,20 +246,23 @@ void Mem_DeInit(void)
 {
     Mem_InstanceIdType i;
 
-    for (i = 0u; i < (Mem_InstanceIdType)MEM_INSTANCE_COUNT; i++)
+    if (Mem_CheckModuleInit(MEM_SID_DEINIT) == TRUE)
     {
-        /* [SWS_Mem_00079] cancel any ongoing operation in the hardware (best-effort - see Flash_IP.c for
-         * the single-Flash-bank limitation on truly aborting an in-flight BSY operation) */
-        Mem_Ipw_DeInit(i);
+        for (i = 0u; i < (Mem_InstanceIdType)MEM_INSTANCE_COUNT; i++)
+        {
+            /* [SWS_Mem_00079] cancel any ongoing operation in the hardware (best-effort - see Flash_IP.c for
+             * the single-Flash-bank limitation on truly aborting an in-flight BSY operation) */
+            Mem_Ipw_DeInit(i);
 
-        Mem_InstanceRuntime[i].JobPending    = FALSE;
-        Mem_InstanceRuntime[i].SuspendActive = FALSE;
+            Mem_InstanceRuntime[i].JobPending    = FALSE;
+            Mem_InstanceRuntime[i].SuspendActive = FALSE;
 
-        Mem_PendingRequest[i].Operation = MEM_OP_NONE;
-        Mem_PendingRequest[i].Started   = FALSE;
+            Mem_PendingRequest[i].Operation = MEM_OP_NONE;
+            Mem_PendingRequest[i].Started   = FALSE;
+        }
+
+        Mem_ModuleState = MEM_UNINIT;
     }
-
-    Mem_ModuleState = MEM_UNINIT;
 }
 
 #if (MEM_VERSION_INFO_API == STD_ON)
@@ -282,7 +285,8 @@ MemAcc_MemJobResultType Mem_GetJobResult(Mem_InstanceIdType instanceId)
 {
     MemAcc_MemJobResultType result = MEM_JOB_FAILED;
 
-    if (Mem_CheckInstanceId(instanceId, MEM_SID_GET_JOB_RESULT) == TRUE) /* [SWS_Mem_00090] */
+    if ((Mem_CheckModuleInit(MEM_SID_GET_JOB_RESULT) == TRUE) &&
+        (Mem_CheckInstanceId(instanceId, MEM_SID_GET_JOB_RESULT) == TRUE)) /* [SWS_Mem_00090] */
     {
         result = Mem_InstanceRuntime[instanceId].JobResult; /* [SWS_Mem_00029] */
     }
@@ -298,7 +302,11 @@ Std_ReturnType Mem_Suspend(Mem_InstanceIdType instanceId)
     if ((Mem_CheckModuleInit(MEM_SID_SUSPEND) == TRUE) &&
         (Mem_CheckInstanceId(instanceId, MEM_SID_SUSPEND) == TRUE)) /* [SWS_Mem_00091] */
     {
-        if (Mem_InstanceRuntime[instanceId].SuspendActive == TRUE)
+        if (Mem_Ipw_IsSuspendResumeSupported(instanceId) == FALSE)
+        {
+            retVal = E_MEM_SERVICE_NOT_AVAIL; /* [SWS_Mem_00082] */
+        }
+        else if (Mem_InstanceRuntime[instanceId].SuspendActive == TRUE)
         {
             retVal = E_NOT_OK; /* [SWS_Mem_00083] already suspended, reject without further action */
         }
@@ -324,7 +332,11 @@ Std_ReturnType Mem_Resume(Mem_InstanceIdType instanceId)
     if ((Mem_CheckModuleInit(MEM_SID_RESUME) == TRUE) &&
         (Mem_CheckInstanceId(instanceId, MEM_SID_RESUME) == TRUE)) /* [SWS_Mem_00092] */
     {
-        if (Mem_InstanceRuntime[instanceId].SuspendActive == FALSE)
+        if (Mem_Ipw_IsSuspendResumeSupported(instanceId) == FALSE)
+        {
+            retVal = E_MEM_SERVICE_NOT_AVAIL; /* [SWS_Mem_00082] */
+        }
+        else if (Mem_InstanceRuntime[instanceId].SuspendActive == FALSE)
         {
             retVal = E_NOT_OK; /* [SWS_Mem_00084] no suspend pending, reject without further action */
         }
@@ -345,7 +357,8 @@ Std_ReturnType Mem_Resume(Mem_InstanceIdType instanceId)
 /* [SWS_Mem_10015] */
 void Mem_PropagateError(Mem_InstanceIdType instanceId)
 {
-    if (Mem_CheckInstanceId(instanceId, MEM_SID_PROPAGATE_ERROR) == TRUE) /* [SWS_Mem_00020] */
+    if ((Mem_CheckModuleInit(MEM_SID_PROPAGATE_ERROR) == TRUE) &&
+        (Mem_CheckInstanceId(instanceId, MEM_SID_PROPAGATE_ERROR) == TRUE)) /* [SWS_Mem_00020] */
     {
         /* [SWS_Mem_00061] set job result to MEM_ECC_UNCORRECTED and cancel current job processing */
         Mem_InstanceRuntime[instanceId].JobResult  = MEM_ECC_UNCORRECTED;
@@ -358,8 +371,10 @@ void Mem_PropagateError(Mem_InstanceIdType instanceId)
 
 /*======================================================================================================================
  *  8.3.2  ASYNCHRONOUS FUNCTIONS
- *  Per [SWS_Mem_00066], these functions only validate parameters and record the request; the actual
- *  Mem_Ipw_xxx() hardware trigger is performed later, inside Mem_MainFunction() below.
+ *  Per [SWS_Mem_00066], these functions validate parameters and record accepted requests; the actual
+ *  Mem_Ipw_xxx() hardware trigger is performed later, inside Mem_MainFunction() below. Optional services
+ *  that are not implemented for the memory technology are rejected synchronously with
+ *  E_MEM_SERVICE_NOT_AVAIL per [SWS_Mem_00070].
  *====================================================================================================================*/
 
 /* [SWS_Mem_10012] */
@@ -494,20 +509,26 @@ Std_ReturnType Mem_HwSpecificService(
     if ((Mem_CheckModuleInit(MEM_SID_HW_SPECIFIC_SERVICE)              == TRUE) &&
         (Mem_CheckInstanceId(instanceId, MEM_SID_HW_SPECIFIC_SERVICE) == TRUE) && /* 00026 */
         (Mem_CheckPointer(dataPtr, MEM_SID_HW_SPECIFIC_SERVICE)       == TRUE) && /* 00027 */
-        (Mem_CheckPointer(lengthPtr, MEM_SID_HW_SPECIFIC_SERVICE)     == TRUE) && /* 00027 */
-        (Mem_CheckJobPending(instanceId, MEM_SID_HW_SPECIFIC_SERVICE) == TRUE))   /* not numbered, see
-                                                                                       Mem_CheckJobPending() */
+        (Mem_CheckPointer(lengthPtr, MEM_SID_HW_SPECIFIC_SERVICE)     == TRUE))   /* 00027 */
     {
-        Mem_PendingRequest[instanceId].Operation   = MEM_OP_HW_SPECIFIC;
-        Mem_PendingRequest[instanceId].HwServiceId = hwServiceId;
-        Mem_PendingRequest[instanceId].HwDataPtr   = dataPtr;
-        Mem_PendingRequest[instanceId].HwLengthPtr = lengthPtr;
-        Mem_PendingRequest[instanceId].Started     = FALSE;
+        if (Mem_Ipw_IsHwSpecificServiceSupported(instanceId, hwServiceId) == FALSE)
+        {
+            retVal = E_MEM_SERVICE_NOT_AVAIL; /* [SWS_Mem_00070] / API return contract of [SWS_Mem_10017] */
+        }
+        else if (Mem_CheckJobPending(instanceId, MEM_SID_HW_SPECIFIC_SERVICE) == TRUE) /* see
+                                                                                            Mem_CheckJobPending() */
+        {
+            Mem_PendingRequest[instanceId].Operation   = MEM_OP_HW_SPECIFIC;
+            Mem_PendingRequest[instanceId].HwServiceId = hwServiceId;
+            Mem_PendingRequest[instanceId].HwDataPtr   = dataPtr;
+            Mem_PendingRequest[instanceId].HwLengthPtr = lengthPtr;
+            Mem_PendingRequest[instanceId].Started     = FALSE;
 
-        Mem_InstanceRuntime[instanceId].JobPending = TRUE;
-        Mem_InstanceRuntime[instanceId].JobResult  = MEM_JOB_PENDING;
+            Mem_InstanceRuntime[instanceId].JobPending = TRUE;
+            Mem_InstanceRuntime[instanceId].JobResult  = MEM_JOB_PENDING;
 
-        retVal = E_OK;
+            retVal = E_OK;
+        }
     }
 
     return retVal;

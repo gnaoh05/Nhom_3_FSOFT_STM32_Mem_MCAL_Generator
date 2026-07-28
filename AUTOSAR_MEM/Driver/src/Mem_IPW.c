@@ -61,6 +61,20 @@ static boolean Mem_Ipw_IsInstanceSupported(Mem_InstanceIdType instanceId)
     return (boolean)(instanceId < (Mem_InstanceIdType)MEM_INSTANCE_COUNT);
 }
 
+boolean Mem_Ipw_IsHwSpecificServiceSupported(
+        Mem_InstanceIdType   instanceId,
+        Mem_HwServiceIdType  hwServiceId)
+{
+    (void)hwServiceId;
+
+    return (boolean)((Mem_Ipw_IsInstanceSupported(instanceId) == TRUE) && FALSE);
+}
+
+boolean Mem_Ipw_IsSuspendResumeSupported(Mem_InstanceIdType instanceId)
+{
+    return (boolean)((Mem_Ipw_IsInstanceSupported(instanceId) == TRUE) && FALSE);
+}
+
 static MemAcc_MemJobResultType Mem_Ipw_MapFlashIpStatus(Flash_IP_StatusType status)
 {
     MemAcc_MemJobResultType result;
@@ -230,12 +244,15 @@ Std_ReturnType Mem_Ipw_HwSpecificService(
     /* No hardware specific services (e.g. read protection level, option byte access, 96-bit unique ID
      * read at 0x1FFF7A10) are implemented for this reference port, see [SWS_Mem_00070]. Add cases per
      * hwServiceId in Flash_IP.c and dispatch to them here if needed. */
-    (void)instanceId;
-    (void)hwServiceId;
     (void)dataPtr;
     (void)lengthPtr;
 
-    return E_MEM_SERVICE_NOT_AVAIL;
+    if (Mem_Ipw_IsHwSpecificServiceSupported(instanceId, hwServiceId) == FALSE)
+    {
+        return E_MEM_SERVICE_NOT_AVAIL;
+    }
+
+    return E_NOT_OK;
 }
 
 /*======================================================================================================================
@@ -246,14 +263,22 @@ Std_ReturnType Mem_Ipw_HwSpecificService(
 
 Std_ReturnType Mem_Ipw_Suspend(Mem_InstanceIdType instanceId)
 {
-    (void)instanceId;
-    return E_MEM_SERVICE_NOT_AVAIL;
+    if (Mem_Ipw_IsSuspendResumeSupported(instanceId) == FALSE)
+    {
+        return E_MEM_SERVICE_NOT_AVAIL;
+    }
+
+    return E_NOT_OK;
 }
 
 Std_ReturnType Mem_Ipw_Resume(Mem_InstanceIdType instanceId)
 {
-    (void)instanceId;
-    return E_MEM_SERVICE_NOT_AVAIL;
+    if (Mem_Ipw_IsSuspendResumeSupported(instanceId) == FALSE)
+    {
+        return E_MEM_SERVICE_NOT_AVAIL;
+    }
+
+    return E_NOT_OK;
 }
 
 /*======================================================================================================================

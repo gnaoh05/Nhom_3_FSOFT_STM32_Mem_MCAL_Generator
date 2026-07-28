@@ -27,10 +27,26 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
+#include "stm32f401xe.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
+#ifndef GPIO_PIN_2
+#define GPIO_PIN_2                  (1UL << 2)
+#endif
+#ifndef GPIO_PIN_3
+#define GPIO_PIN_3                  (1UL << 3)
+#endif
+#ifndef GPIO_PIN_5
+#define GPIO_PIN_5                  (1UL << 5)
+#endif
+#ifndef GPIO_PIN_13
+#define GPIO_PIN_13                 (1UL << 13)
+#endif
+#ifndef GPIO_PIN_14
+#define GPIO_PIN_14                 (1UL << 14)
+#endif
 
 /* USER CODE END Includes */
 
