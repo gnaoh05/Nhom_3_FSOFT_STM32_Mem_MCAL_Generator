@@ -2,26 +2,42 @@
 #define FLASH_IP_H
 
 #include "Flash_IP_Cfg.h"
+#include "Flash_IP_Types.h"
+#include "Std_Types.h"
 
-/* Định nghĩa trạng thái hoạt động thuần túy phần cứng */
-typedef enum {
-    FLASH_IP_UNINITIALIZED = 0x00,
-    FLASH_IP_INITIALIZED   = 0x01
-} Flash_IP_StatusType;
-
-/* Kết quả thực thi tác vụ phần cứng vật lý */
-typedef enum {
-    FLASH_IP_JOB_OK               = 0x00, /* Thao tác thành công */
-    FLASH_IP_JOB_FAILED           = 0x01, /* Lỗi phần cứng chung */
-    FLASH_IP_WRITE_PROTECT_ERROR  = 0x02, /* Lỗi phân vùng bị khóa chống ghi */
-    FLASH_IP_ALIGNMENT_ERROR      = 0x03  /* Lỗi địa chỉ không căn lề Word */
-} Flash_IP_JobResultType;
-
-/* Khai báo các API lớp IP - Không chứa bất kỳ kiểu dữ liệu nào của tầng trên */
+/**
+ * @brief  Khởi tạo phần cứng Flash IP (Cấu hình Latency ACR & Prefetch/Cache)
+ */
 void Flash_IP_Init(void);
+
+/**
+ * @brief  Hủy khởi tạo (Khóa thanh ghi Flash & Reset ACR về mặc định)
+ */
 void Flash_IP_DeInit(void);
-Flash_IP_JobResultType Flash_IP_Read(uint32_t address, uint8_t *targetPtr, uint32_t length);
-Flash_IP_JobResultType Flash_IP_Write(uint32_t address, const uint8_t *sourcePtr, uint32_t length);
-Flash_IP_JobResultType Flash_IP_Erase(uint8_t sectorNum);
+
+/**
+ * @brief  Đọc chuỗi Byte từ địa chỉ bộ nhớ Flash vật lý
+ * @param  address   Địa chỉ Flash cần đọc
+ * @param  targetPtr Con trỏ chứa dữ liệu đọc ra
+ * @param  length    Số lượng Byte cần đọc
+ * @return Flash_IP_JobResultType Kết quả thực thi
+ */
+Flash_IP_JobResultType Flash_IP_Read(uint32 address, uint8 *targetPtr, uint32 length);
+
+/**
+ * @brief  Ghi dữ liệu vào bộ nhớ Flash vật lý (Xử lý căn lề Word & byte dư)
+ * @param  address   Địa chỉ Flash cần ghi (Yêu cầu căn lề 4-byte)
+ * @param  sourcePtr Con trỏ chứa dữ liệu cần ghi
+ * @param  length    Số lượng Byte cần ghi
+ * @return Flash_IP_JobResultType Kết quả thực thi
+ */
+Flash_IP_JobResultType Flash_IP_Write(uint32 address, const uint8 *sourcePtr, uint32 length);
+
+/**
+ * @brief  Xóa một Sector bộ nhớ Flash
+ * @param  sectorNum Chỉ số Sector cần xóa (0 -> 7)
+ * @return Flash_IP_JobResultType Kết quả thực thi
+ */
+Flash_IP_JobResultType Flash_IP_Erase(uint8 sectorNum);
 
 #endif /* FLASH_IP_H */
