@@ -1,5 +1,5 @@
-#include "Stm32F401_BareMetal.h"
 #include <stddef.h>
+#include <Stm32F401_BareMetal.h>
 
 typedef char Stm32_CheckGpioAfrOffset[
         (offsetof(Stm32_GpioRegistersType, AFR) == 0x20u) ? 1 : -1];

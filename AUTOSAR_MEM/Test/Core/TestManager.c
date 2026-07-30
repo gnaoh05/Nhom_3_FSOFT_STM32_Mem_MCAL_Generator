@@ -3,6 +3,7 @@
  * MÔ TẢ: Khung kiểm thử AUTOSAR MEM Driver mức thanh ghi cho STM32F401
  ******************************************************************************/
 
+#include <Stm32F401_BareMetal.h>
 #include "TestManager.h"
 
 #include "ELF_Init_Test.h"
@@ -14,7 +15,6 @@
 #include "ELF_BlankCheck_Test.h"
 #include "ELF_Job_Test.h"
 
-#include "Stm32F401_BareMetal.h"
 
 #define TEST_REPORT_SIGNATURE    0x54455354UL
 #define TEST_INVALID_INDEX       0xFFFFFFFFUL

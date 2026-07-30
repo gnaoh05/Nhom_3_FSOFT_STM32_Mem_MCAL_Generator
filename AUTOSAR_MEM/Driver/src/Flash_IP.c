@@ -12,8 +12,8 @@
  *                từ RM0368. Module không phụ thuộc CMSIS, HAL hoặc LL.
  *********************************************************************************************************************/
 
+#include <Stm32F401_BareMetal.h>
 #include "Flash_IP.h"
-#include "Stm32F401_BareMetal.h"
 
 /* GHI CHÚ: Trên Cortex-M4 32-bit thực tế, sizeof(void*) == sizeof(uint32), nên ép kiểu địa chỉ uint32 sang
  * (volatile uint8*) bên dưới có đúng độ rộng và không sinh cảnh báo. Cảnh báo -Wint-to-pointer-cast chỉ có

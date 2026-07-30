@@ -1,4 +1,4 @@
-14:00:05 **** Incremental Build of configuration Debug for project AUTOSAR_MEM ****
+14:08:38 **** Incremental Build of configuration Debug for project AUTOSAR_MEM ****
 make -j20 all 
 arm-none-eabi-gcc "../Test/Testcase/ELF_BlankCheck_Test.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -c -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Test/Testcase/include" -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Test/Core" -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Test/STM32F401/Core/Inc" -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Test/Stub/Det" -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Driver/include" -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Driver/Code_Generator/templates/include" -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Test/Testcase/ELF_BlankCheck_Test.d" -MT"Test/Testcase/ELF_BlankCheck_Test.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Test/Testcase/ELF_BlankCheck_Test.o"
 arm-none-eabi-gcc "../Test/Testcase/ELF_Det_Test.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -c -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Test/Testcase/include" -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Test/Core" -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Test/STM32F401/Core/Inc" -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Test/Stub/Det" -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Driver/include" -I"C:/Users/ZEPHYRUS M16/Documents/Intergration/AUTOSAR_MEM/Driver/Code_Generator/templates/include" -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Test/Testcase/ELF_Det_Test.d" -MT"Test/Testcase/ELF_Det_Test.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Test/Testcase/ELF_Det_Test.o"
@@ -33,5 +33,5 @@ Finished building: default.size.stdout
 Finished building: AUTOSAR_MEM.list
  
 
-14:00:06 Build Finished. 0 errors, 0 warnings. (took 1s.289ms)
+14:08:38 Build Finished. 0 errors, 0 warnings. (took 799ms)
 

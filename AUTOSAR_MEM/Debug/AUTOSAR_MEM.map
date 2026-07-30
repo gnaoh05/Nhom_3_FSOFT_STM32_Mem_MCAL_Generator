@@ -207,13 +207,13 @@ Discarded input sections
  .debug_macro   0x00000000      0x103 ./Test/Core/TestManager.o
  .debug_macro   0x00000000       0x6a ./Test/Core/TestManager.o
  .debug_macro   0x00000000      0x1df ./Test/Core/TestManager.o
+ .debug_macro   0x00000000      0x1a3 ./Test/Core/TestManager.o
  .debug_macro   0x00000000       0x22 ./Test/Core/TestManager.o
  .debug_macro   0x00000000       0x34 ./Test/Core/TestManager.o
  .debug_macro   0x00000000       0x52 ./Test/Core/TestManager.o
  .debug_macro   0x00000000       0xb2 ./Test/Core/TestManager.o
  .debug_macro   0x00000000       0x1c ./Test/Core/TestManager.o
  .debug_macro   0x00000000       0x22 ./Test/Core/TestManager.o
- .debug_macro   0x00000000      0x1a9 ./Test/Core/TestManager.o
  .group         0x00000000        0xc ./Test/Core/main.o
  .group         0x00000000        0xc ./Test/Core/main.o
  .group         0x00000000        0xc ./Test/Core/main.o
@@ -264,6 +264,7 @@ Discarded input sections
  .debug_macro   0x00000000      0x103 ./Test/STM32F401/Core/Src/Stm32F401_BareMetal.o
  .debug_macro   0x00000000       0x6a ./Test/STM32F401/Core/Src/Stm32F401_BareMetal.o
  .debug_macro   0x00000000      0x1df ./Test/STM32F401/Core/Src/Stm32F401_BareMetal.o
+ .debug_macro   0x00000000      0x1a3 ./Test/STM32F401/Core/Src/Stm32F401_BareMetal.o
  .group         0x00000000        0xc ./Test/STM32F401/Core/Src/stm32f4xx_it.o
  .group         0x00000000        0xc ./Test/STM32F401/Core/Src/stm32f4xx_it.o
  .group         0x00000000        0xc ./Test/STM32F401/Core/Src/stm32f4xx_it.o
@@ -1867,7 +1868,7 @@ LOAD C:/ST/STM32CubeIDE_1.17.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.ext
  .debug_aranges
                 0x000006c0       0x50 ./Test/Testcase/ELF_Write_Test.o
 
-.debug_macro    0x00000000     0x238b
+.debug_macro    0x00000000     0x21f6
  .debug_macro   0x00000000       0xa0 ./Driver/Code_Generator/templates/src/Flash_IP_Cfg.o
  .debug_macro   0x000000a0      0xaa8 ./Driver/Code_Generator/templates/src/Flash_IP_Cfg.o
  .debug_macro   0x00000b48       0x22 ./Driver/Code_Generator/templates/src/Flash_IP_Cfg.o
@@ -1879,50 +1880,49 @@ LOAD C:/ST/STM32CubeIDE_1.17.0/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.ext
  .debug_macro   0x00000f95       0x22 ./Driver/Code_Generator/templates/src/Flash_IP_Cfg.o
  .debug_macro   0x00000fb7       0x34 ./Driver/Code_Generator/templates/src/Flash_IP_Cfg.o
  .debug_macro   0x00000feb       0x1c ./Driver/Code_Generator/templates/src/Flash_IP_Cfg.o
- .debug_macro   0x00001007      0x14d ./Driver/src/Flash_IP.o
- .debug_macro   0x00001154      0x1a9 ./Driver/src/Flash_IP.o
- .debug_macro   0x000012fd       0xc4 ./Driver/src/Mem.o
- .debug_macro   0x000013c1       0xb2 ./Driver/src/Mem.o
- .debug_macro   0x00001473       0x1c ./Driver/src/Mem.o
- .debug_macro   0x0000148f       0xc4 ./Driver/src/Mem_IPW.o
- .debug_macro   0x00001553       0x22 ./Driver/src/Mem_IPW.o
- .debug_macro   0x00001575      0x133 ./Test/Core/TestManager.o
- .debug_macro   0x000016a8       0x5e ./Test/Core/TestManager.o
- .debug_macro   0x00001706       0xc8 ./Test/Core/main.o
- .debug_macro   0x000017ce       0x85 ./Test/STM32F401/Core/Src/Stm32F401_BareMetal.o
- .debug_macro   0x00001853      0x1a3 ./Test/STM32F401/Core/Src/Stm32F401_BareMetal.o
- .debug_macro   0x000019f6      0x189 ./Test/STM32F401/Core/Src/Stm32F401_BareMetal.o
- .debug_macro   0x00001b7f       0xd2 ./Test/STM32F401/Core/Src/stm32f4xx_it.o
- .debug_macro   0x00001c51       0x94 ./Test/Stub/Det/det.o
- .debug_macro   0x00001ce5       0x16 ./Test/Stub/Det/det.o
- .debug_macro   0x00001cfb       0xd2 ./Test/Testcase/ELF_BlankCheck_Test.o
- .debug_macro   0x00001dcd       0xd2 ./Test/Testcase/ELF_Det_Test.o
- .debug_macro   0x00001e9f       0xd2 ./Test/Testcase/ELF_Erase_Test.o
- .debug_macro   0x00001f71       0xd2 ./Test/Testcase/ELF_Init_Test.o
- .debug_macro   0x00002043       0xd2 ./Test/Testcase/ELF_Job_Test.o
- .debug_macro   0x00002115       0xd2 ./Test/Testcase/ELF_Read_Test.o
- .debug_macro   0x000021e7       0xd2 ./Test/Testcase/ELF_Status_Test.o
- .debug_macro   0x000022b9       0xd2 ./Test/Testcase/ELF_Write_Test.o
+ .debug_macro   0x00001007      0x157 ./Driver/src/Flash_IP.o
+ .debug_macro   0x0000115e      0x1a3 ./Driver/src/Flash_IP.o
+ .debug_macro   0x00001301       0xc4 ./Driver/src/Mem.o
+ .debug_macro   0x000013c5       0xb2 ./Driver/src/Mem.o
+ .debug_macro   0x00001477       0x1c ./Driver/src/Mem.o
+ .debug_macro   0x00001493       0xc4 ./Driver/src/Mem_IPW.o
+ .debug_macro   0x00001557       0x22 ./Driver/src/Mem_IPW.o
+ .debug_macro   0x00001579      0x13d ./Test/Core/TestManager.o
+ .debug_macro   0x000016b6       0x5e ./Test/Core/TestManager.o
+ .debug_macro   0x00001714       0xc8 ./Test/Core/main.o
+ .debug_macro   0x000017dc       0x85 ./Test/STM32F401/Core/Src/Stm32F401_BareMetal.o
+ .debug_macro   0x00001861      0x189 ./Test/STM32F401/Core/Src/Stm32F401_BareMetal.o
+ .debug_macro   0x000019ea       0xd2 ./Test/STM32F401/Core/Src/stm32f4xx_it.o
+ .debug_macro   0x00001abc       0x94 ./Test/Stub/Det/det.o
+ .debug_macro   0x00001b50       0x16 ./Test/Stub/Det/det.o
+ .debug_macro   0x00001b66       0xd2 ./Test/Testcase/ELF_BlankCheck_Test.o
+ .debug_macro   0x00001c38       0xd2 ./Test/Testcase/ELF_Det_Test.o
+ .debug_macro   0x00001d0a       0xd2 ./Test/Testcase/ELF_Erase_Test.o
+ .debug_macro   0x00001ddc       0xd2 ./Test/Testcase/ELF_Init_Test.o
+ .debug_macro   0x00001eae       0xd2 ./Test/Testcase/ELF_Job_Test.o
+ .debug_macro   0x00001f80       0xd2 ./Test/Testcase/ELF_Read_Test.o
+ .debug_macro   0x00002052       0xd2 ./Test/Testcase/ELF_Status_Test.o
+ .debug_macro   0x00002124       0xd2 ./Test/Testcase/ELF_Write_Test.o
 
-.debug_line     0x00000000     0x8527
+.debug_line     0x00000000     0x861a
  .debug_line    0x00000000      0x500 ./Driver/Code_Generator/templates/src/Flash_IP_Cfg.o
- .debug_line    0x00000500      0x842 ./Driver/src/Flash_IP.o
- .debug_line    0x00000d42      0xa67 ./Driver/src/Mem.o
- .debug_line    0x000017a9      0x850 ./Driver/src/Mem_IPW.o
- .debug_line    0x00001ff9     0x1087 ./Test/Core/TestManager.o
- .debug_line    0x00003080      0x56e ./Test/Core/main.o
- .debug_line    0x000035ee      0x58e ./Test/STM32F401/Core/Src/Stm32F401_BareMetal.o
- .debug_line    0x00003b7c      0x6e9 ./Test/STM32F401/Core/Src/stm32f4xx_it.o
- .debug_line    0x00004265       0x7a ./Test/STM32F401/Core/Startup/startup_stm32f401retx.o
- .debug_line    0x000042df      0x4fc ./Test/Stub/Det/det.o
- .debug_line    0x000047db      0x7b3 ./Test/Testcase/ELF_BlankCheck_Test.o
- .debug_line    0x00004f8e      0x74d ./Test/Testcase/ELF_Det_Test.o
- .debug_line    0x000056db      0x7d4 ./Test/Testcase/ELF_Erase_Test.o
- .debug_line    0x00005eaf      0x787 ./Test/Testcase/ELF_Init_Test.o
- .debug_line    0x00006636      0x88c ./Test/Testcase/ELF_Job_Test.o
- .debug_line    0x00006ec2      0x775 ./Test/Testcase/ELF_Read_Test.o
- .debug_line    0x00007637      0x740 ./Test/Testcase/ELF_Status_Test.o
- .debug_line    0x00007d77      0x7b0 ./Test/Testcase/ELF_Write_Test.o
+ .debug_line    0x00000500      0x893 ./Driver/src/Flash_IP.o
+ .debug_line    0x00000d93      0xa67 ./Driver/src/Mem.o
+ .debug_line    0x000017fa      0x850 ./Driver/src/Mem_IPW.o
+ .debug_line    0x0000204a     0x10d8 ./Test/Core/TestManager.o
+ .debug_line    0x00003122      0x56e ./Test/Core/main.o
+ .debug_line    0x00003690      0x5df ./Test/STM32F401/Core/Src/Stm32F401_BareMetal.o
+ .debug_line    0x00003c6f      0x6e9 ./Test/STM32F401/Core/Src/stm32f4xx_it.o
+ .debug_line    0x00004358       0x7a ./Test/STM32F401/Core/Startup/startup_stm32f401retx.o
+ .debug_line    0x000043d2      0x4fc ./Test/Stub/Det/det.o
+ .debug_line    0x000048ce      0x7b3 ./Test/Testcase/ELF_BlankCheck_Test.o
+ .debug_line    0x00005081      0x74d ./Test/Testcase/ELF_Det_Test.o
+ .debug_line    0x000057ce      0x7d4 ./Test/Testcase/ELF_Erase_Test.o
+ .debug_line    0x00005fa2      0x787 ./Test/Testcase/ELF_Init_Test.o
+ .debug_line    0x00006729      0x88c ./Test/Testcase/ELF_Job_Test.o
+ .debug_line    0x00006fb5      0x775 ./Test/Testcase/ELF_Read_Test.o
+ .debug_line    0x0000772a      0x740 ./Test/Testcase/ELF_Status_Test.o
+ .debug_line    0x00007e6a      0x7b0 ./Test/Testcase/ELF_Write_Test.o
 
 .debug_str      0x00000000     0x7118
  .debug_str     0x00000000     0x3eca ./Driver/Code_Generator/templates/src/Flash_IP_Cfg.o
