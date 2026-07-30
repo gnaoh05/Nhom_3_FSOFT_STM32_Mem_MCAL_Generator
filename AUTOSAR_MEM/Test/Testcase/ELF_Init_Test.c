@@ -1,14 +1,14 @@
 /******************************************************************************
  * FILE: ELF_Init_Test.c
- * DESCRIPTION: Initialization-oriented tests for the AUTOSAR Mem driver
+ * MÔ TẢ: Test khởi tạo cho AUTOSAR Mem driver
  ******************************************************************************/
 
 #include "ELF_Init_Test.h"
 #include "TestManager.h"
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10008], [SWS_Mem_00001], p.29-30
- * - Verifies Mem_Init() initializes the job result to MEM_JOB_OK.
+ * - Kiểm tra Mem_Init() khởi tạo kết quả job là MEM_JOB_OK.
  */
 static void ELF_INIT_001(void)
 {
@@ -25,9 +25,9 @@ static void ELF_INIT_001(void)
                                 (uint32)jobResult);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10009], p.31
- * - Verifies Mem_GetVersionInfo() returns the module identification and software version fields.
+ * - Kiểm tra Mem_GetVersionInfo() trả về thông tin nhận dạng module và phiên bản phần mềm.
  */
 static void ELF_INIT_002(void)
 {
@@ -60,9 +60,9 @@ static void ELF_INIT_002(void)
 #endif
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10008], [SWS_Mem_00087], p.29-30
- * - Verifies Mem_Init() reports MEM_E_PARAM_POINTER when configPtr is not NULL.
+ * - Kiểm tra Mem_Init() báo MEM_E_PARAM_POINTER khi configPtr khác NULL.
  */
 static void ELF_INIT_003(void)
 {
@@ -85,9 +85,9 @@ static void ELF_INIT_003(void)
                                 (passed == TRUE) ? 1u : 0u);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10009], [SWS_Mem_00002], p.31
- * - Verifies Mem_GetVersionInfo() reports MEM_E_PARAM_POINTER when versionInfoPtr is NULL.
+ * - Kiểm tra Mem_GetVersionInfo() báo MEM_E_PARAM_POINTER khi versionInfoPtr là NULL.
  */
 static void ELF_INIT_004(void)
 {
@@ -116,10 +116,10 @@ static void ELF_INIT_004(void)
 #endif
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10018], [SWS_Mem_00079], section 7.3.1, [SWS_Mem_00052],
  *   p.23,25,30-31
- * - Verifies Mem_DeInit() de-initializes the module state so a subsequent API call is rejected as uninitialized.
+ * - Kiểm tra Mem_DeInit() hủy khởi tạo trạng thái module để lời gọi API tiếp theo bị từ chối do chưa khởi tạo.
  */
 static void ELF_INIT_005(void)
 {

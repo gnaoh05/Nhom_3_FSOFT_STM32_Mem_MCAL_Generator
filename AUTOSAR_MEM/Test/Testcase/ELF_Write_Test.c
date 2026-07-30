@@ -1,15 +1,15 @@
 /******************************************************************************
  * FILE: ELF_Write_Test.c
- * DESCRIPTION: Write-path tests for the AUTOSAR Mem driver
+ * MÔ TẢ: Test đường ghi cho AUTOSAR Mem driver
  ******************************************************************************/
 
 #include "ELF_Write_Test.h"
 #include "TestManager.h"
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10013], [SWS_Mem_00066], [SWS_Mem_00067], [SWS_Mem_00088], p.15,24,37-38
- * - Verifies a valid write request completes with MEM_JOB_OK; flash read-back is used as the upper-layer
- *   confirmation mechanism consistent with [SWS_Mem_00088].
+ * - Kiểm tra yêu cầu ghi hợp lệ hoàn tất với MEM_JOB_OK; đọc lại Flash là cơ chế xác nhận của upper layer,
+ *   phù hợp với [SWS_Mem_00088].
  */
 static void ELF_WRITE_001(void)
 {
@@ -53,9 +53,9 @@ static void ELF_WRITE_001(void)
                                 (passed == TRUE) ? 1u : 0u);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10013], [SWS_Mem_00011], p.38
- * - Verifies Mem_Write() rejects an invalid address with MEM_E_PARAM_ADDRESS.
+ * - Kiểm tra Mem_Write() từ chối địa chỉ không hợp lệ với MEM_E_PARAM_ADDRESS.
  */
 static void ELF_WRITE_002(void)
 {
@@ -76,9 +76,9 @@ static void ELF_WRITE_002(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10013], [SWS_Mem_00009], p.37-38
- * - Verifies Mem_Write() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ * - Kiểm tra Mem_Write() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
 static void ELF_WRITE_003(void)
 {
@@ -103,9 +103,9 @@ static void ELF_WRITE_003(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10013], [SWS_Mem_00010], p.37-38
- * - Verifies Mem_Write() rejects a NULL source buffer with MEM_E_PARAM_POINTER.
+ * - Kiểm tra Mem_Write() từ chối source buffer NULL với MEM_E_PARAM_POINTER.
  */
 static void ELF_WRITE_004(void)
 {
@@ -128,9 +128,9 @@ static void ELF_WRITE_004(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10013], [SWS_Mem_00012], p.38
- * - Verifies Mem_Write() rejects an invalid length with MEM_E_PARAM_LENGTH.
+ * - Kiểm tra Mem_Write() từ chối độ dài không hợp lệ với MEM_E_PARAM_LENGTH.
  */
 static void ELF_WRITE_005(void)
 {
@@ -157,7 +157,7 @@ static void ELF_WRITE_005(void)
 
 /* Traceability:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10013], [SWS_Mem_00013], p.38
- * - Verifies Mem_Write() rejects a request while another job is already pending.
+ * - Kiểm tra Mem_Write() từ chối yêu cầu khi một job khác đang pending.
  */
 static void ELF_WRITE_006(void)
 {

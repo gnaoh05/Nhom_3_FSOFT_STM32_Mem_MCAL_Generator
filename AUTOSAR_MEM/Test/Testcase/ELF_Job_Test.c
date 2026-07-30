@@ -1,14 +1,14 @@
 /******************************************************************************
  * FILE: ELF_Job_Test.c
- * DESCRIPTION: Job-control tests for the AUTOSAR Mem driver
+ * MÔ TẢ: Test điều khiển job cho AUTOSAR Mem driver
  ******************************************************************************/
 
 #include "ELF_Job_Test.h"
 #include "TestManager.h"
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_00057], [SWS_Mem_00059], [SWS_Mem_00007], [SWS_Mem_10012], p.14-15,36
- * - Verifies a second job request is rejected while the first job is still pending.
+ * - Kiểm tra yêu cầu job thứ hai bị từ chối khi job thứ nhất vẫn pending.
  */
 static void ELF_JOB_001(void)
 {
@@ -35,9 +35,9 @@ static void ELF_JOB_001(void)
     (void)TestManager_ExecuteMainUntilDone(TEST_FLASH_INSTANCE, TEST_MAINFUNCTION_TIMEOUT);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10015], [SWS_Mem_00061], p.35
- * - Verifies Mem_PropagateError() cancels the current job and sets MEM_ECC_UNCORRECTED.
+ * - Kiểm tra Mem_PropagateError() hủy job hiện tại và đặt MEM_ECC_UNCORRECTED.
  */
 static void ELF_JOB_002(void)
 {
@@ -63,9 +63,9 @@ static void ELF_JOB_002(void)
                                 (uint32)jobResult);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00070], p.23,41
- * - Verifies an unsupported hardware-specific service returns E_MEM_SERVICE_NOT_AVAIL.
+ * - Kiểm tra hardware-specific service không được hỗ trợ trả E_MEM_SERVICE_NOT_AVAIL.
  */
 static void ELF_JOB_003(void)
 {
@@ -84,9 +84,9 @@ static void ELF_JOB_003(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10024], [SWS_Mem_00082], p.16,33
- * - Verifies Mem_Suspend() returns E_MEM_SERVICE_NOT_AVAIL when the memory technology has no suspend support.
+ * - Kiểm tra Mem_Suspend() trả E_MEM_SERVICE_NOT_AVAIL khi công nghệ bộ nhớ không hỗ trợ suspend.
  */
 static void ELF_JOB_004(void)
 {
@@ -103,9 +103,9 @@ static void ELF_JOB_004(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10025], [SWS_Mem_00082], p.16,34
- * - Verifies Mem_Resume() returns E_MEM_SERVICE_NOT_AVAIL when the memory technology has no resume support.
+ * - Kiểm tra Mem_Resume() trả E_MEM_SERVICE_NOT_AVAIL khi công nghệ bộ nhớ không hỗ trợ resume.
  */
 static void ELF_JOB_005(void)
 {
@@ -122,9 +122,9 @@ static void ELF_JOB_005(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10015], [SWS_Mem_00020], p.35
- * - Verifies Mem_PropagateError() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ * - Kiểm tra Mem_PropagateError() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
 static void ELF_JOB_006(void)
 {
@@ -147,9 +147,9 @@ static void ELF_JOB_006(void)
                                 (uint32)jobResult);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00026], p.41-42
- * - Verifies Mem_HwSpecificService() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ * - Kiểm tra Mem_HwSpecificService() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
 static void ELF_JOB_007(void)
 {
@@ -171,9 +171,9 @@ static void ELF_JOB_007(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00027], p.41-42
- * - Verifies Mem_HwSpecificService() rejects a NULL data pointer with MEM_E_PARAM_POINTER.
+ * - Kiểm tra Mem_HwSpecificService() từ chối data pointer NULL với MEM_E_PARAM_POINTER.
  */
 static void ELF_JOB_008(void)
 {
@@ -194,9 +194,9 @@ static void ELF_JOB_008(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00027], p.41-42
- * - Verifies Mem_HwSpecificService() rejects a NULL length pointer with MEM_E_PARAM_POINTER.
+ * - Kiểm tra Mem_HwSpecificService() từ chối length pointer NULL với MEM_E_PARAM_POINTER.
  */
 static void ELF_JOB_009(void)
 {
@@ -217,9 +217,9 @@ static void ELF_JOB_009(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10024], [SWS_Mem_00091], p.33
- * - Verifies Mem_Suspend() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ * - Kiểm tra Mem_Suspend() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
 static void ELF_JOB_010(void)
 {
@@ -239,9 +239,9 @@ static void ELF_JOB_010(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10025], [SWS_Mem_00092], p.34
- * - Verifies Mem_Resume() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ * - Kiểm tra Mem_Resume() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
 static void ELF_JOB_011(void)
 {

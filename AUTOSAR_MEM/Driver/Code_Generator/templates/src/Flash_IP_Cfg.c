@@ -1,15 +1,15 @@
 /**********************************************************************************************************************
  *  FILE:         Flash_IP_Cfg.c
  *  MODULE:       Flash_IP (STM32F401RE internal Flash - bare-metal IP driver) - Configuration
- *  DESCRIPTION:  Sector geometry table for the STM32F401RE internal Flash (512 KB, 8 sectors).
- *                See Flash_IP_Cfg.h for the type definition and macro documentation.
+ *  MÔ TẢ:        Bảng hình học sector của Flash nội STM32F401RE (512 KB, 8 sector).
+ *                Xem Flash_IP_Cfg.h để biết định nghĩa type và tài liệu macro.
  *********************************************************************************************************************/
 
 #include "Flash_IP_Cfg.h"
 
 const Flash_IP_SectorType Flash_IP_SectorTable[] =
 {
-    /* StartAddress    Size          */
+    /* Địa chỉ đầu    Kích thước     */
     { 0x08000000UL, 0x00004000UL }, /* Sector 0: 16 KB  */
     { 0x08004000UL, 0x00004000UL }, /* Sector 1: 16 KB  */
     { 0x08008000UL, 0x00004000UL }, /* Sector 2: 16 KB  */
@@ -24,11 +24,11 @@ const Flash_IP_SectorType Flash_IP_SectorTable[] =
  *  [SWS_Mem_00033] "The Mem driver shall check static configuration parameters statically (at the latest
  *  during compile time) for correctness."
  *
- *  The two checks below catch a mismatched edit of FLASH_IP_SECTOR_COUNT vs. the table above (array-size
- *  check) and a mismatched edit of FLASH_IP_TOTAL_SIZE vs. the sum of the individual sector sizes
- *  (total-size check) - turning a silent, runtime-corrupting configuration error (e.g. sector geometry no
- *  longer covering the whole Flash, or overlapping) into a compile-time failure. Implemented with the
- *  classic "negative array size" trick for C90/C99 portability (no _Static_assert available pre-C11).
+ *  Hai kiểm tra bên dưới phát hiện chỉnh sửa không khớp giữa FLASH_IP_SECTOR_COUNT và bảng trên
+ *  (kiểm tra kích thước mảng), hoặc giữa FLASH_IP_TOTAL_SIZE và tổng kích thước các sector (kiểm tra tổng
+ *  kích thước). Nhờ đó lỗi cấu hình âm thầm làm sai runtime, ví dụ không bao phủ hết Flash hoặc chồng lấn
+ *  sector, trở thành lỗi compile-time. Cách hiện thực dùng kỹ thuật "negative array size" để tương thích
+ *  C90/C99, nơi chưa có _Static_assert.
  *====================================================================================================================*/
 #define FLASH_IP_CFG_STATIC_ASSERT(cond, uniqueName) typedef char uniqueName[(cond) ? 1 : -1]
 

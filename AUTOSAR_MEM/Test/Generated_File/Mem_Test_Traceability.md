@@ -1,34 +1,34 @@
 # AUTOSAR MEM Requirement Traceability
 
-## Scope
+## Phạm vi
 
-- Project: `AUTOSAR_MEM`
+- Dự án: `AUTOSAR_MEM`
 - Target: `STM32F401RE`
-- Test style: register-level on target, no HAL flash service usage
-- Document basis:
+- Phong cách test: mức thanh ghi trên target, không dùng HAL flash service
+- Tài liệu tham chiếu:
   - `AUTOSAR_CP_SWS_MemoryDriver.pdf` (AUTOSAR CP R25-11, Doc ID 1018)
   - `Refenrence manual Stm32f401re.pdf`
 
-This file tracks the requirements covered by the STM32 target test suite in `Test/Testcase`.
-The suite is intended to cover all requirements that are both:
+Tệp này theo dõi các Requirement được bộ test target STM32 trong `Test/Testcase` kiểm tra.
+Bộ test hướng đến các Requirement vừa:
 
-- implemented by this project, and
-- meaningfully testable at runtime on the current STM32F401 internal-flash port.
+- được dự án này hiện thực, và
+- có thể kiểm tra có ý nghĩa tại runtime trên port Flash nội STM32F401 hiện tại.
 
-Requirements that are configuration-only, compile-time-only, review-only, or not applicable to this memory technology are listed separately.
+Requirement chỉ liên quan cấu hình, chỉ compile-time, chỉ review hoặc không áp dụng cho công nghệ bộ nhớ này được liệt kê riêng.
 
-## Runtime Coverage Summary
+## Tóm Tắt Runtime Coverage
 
-- Runtime testcase count: `49`
-- Covered by target execution:
-  - API definition coverage
-  - DET coverage
-  - job-state coverage
-  - asynchronous execution coverage
-  - destructive flash write/erase/blank-check coverage
-  - unsupported optional service coverage
+- Số testcase runtime: `49`
+- Target execution bao phủ:
+  - API definition
+  - DET
+  - trạng thái job
+  - thực thi bất đồng bộ
+  - write/erase/blank-check Flash có phá hủy dữ liệu
+  - optional service không hỗ trợ
 
-## Testcase Inventory
+## Danh Sách Testcase
 
 - `0x0101` `JobResultAfterInit`
 - `0x0102` `VersionInfoMatches`
@@ -82,78 +82,78 @@ Requirements that are configuration-only, compile-time-only, review-only, or not
 
 ## Requirement Coverage Matrix
 
-| Requirement | Coverage | Testcases | Notes |
+| Requirement | Coverage | Testcases | Ghi chú |
 | --- | --- | --- | --- |
-| `SWS_Mem_10008` | Runtime | `0x0101`, `0x0103` | `Mem_Init()` API behavior |
-| `SWS_Mem_00001` | Runtime | `0x0101`, `0x0301` | Initial job result becomes `MEM_JOB_OK` |
-| `SWS_Mem_00087` | Runtime | `0x0103` | `configPtr` must be `NULL_PTR` |
-| `SWS_Mem_10009` | Runtime | `0x0102`, `0x0104` | `Mem_GetVersionInfo()` API behavior |
-| `SWS_Mem_00002` | Runtime | `0x0104` | `Mem_GetVersionInfo(NULL_PTR)` DET |
-| `SWS_Mem_10018` | Runtime | `0x0105` | `Mem_DeInit()` API behavior |
-| `SWS_Mem_00079` | Runtime plus review | `0x0105` | Runtime verifies de-initialized state; full cancellation of in-flight flash operations remains hardware-limited on STM32F401 single-bank flash |
-| `Section7.3.1` | Runtime | `0x0105`, `0x0201` | APIs other than allowed exceptions require initialization |
-| `SWS_Mem_00052` | Runtime | `0x0105`, `0x0201`, `0x0202`, `0x0203`, `0x0204`, `0x0205`, `0x0304`, `0x0402`, `0x0403`, `0x0404`, `0x0502`, `0x0503`, `0x0504`, `0x0505`, `0x0602`, `0x0603`, `0x0604`, `0x0605`, `0x0703`, `0x0704`, `0x0705`, `0x0806`, `0x0807`, `0x0808`, `0x0809`, `0x0810`, `0x0811` | Development-error classification exercised by target tests |
-| `SWS_Mem_10011` | Runtime | `0x0301`, `0x0304` | `Mem_GetJobResult()` API behavior |
-| `SWS_Mem_00029` | Runtime | `0x0301`, `0x0302`, `0x0305` | Driver tracks current job result |
-| `SWS_Mem_00090` | Runtime | `0x0304` | Invalid instance ID in `Mem_GetJobResult()` |
-| `SWS_Mem_00059` | Runtime | `0x0305`, `0x0801` | Unprocessable job requests are rejected with `E_NOT_OK` |
-| `SWS_Mem_10012` | Runtime | `0x0202`, `0x0203`, `0x0204`, `0x0205`, `0x0302`, `0x0303`, `0x0305`, `0x0401`, `0x0402`, `0x0403`, `0x0404`, `0x0405`, `0x0801` | `Mem_Read()` API behavior |
-| `SWS_Mem_00004` | Runtime | `0x0205`, `0x0404` | Invalid instance ID in `Mem_Read()` |
-| `SWS_Mem_00005` | Runtime | `0x0202` | `Mem_Read(NULL_PTR)` DET |
-| `SWS_Mem_00006` | Runtime | `0x0203`, `0x0402` | Invalid address in `Mem_Read()` |
-| `SWS_Mem_00072` | Runtime | `0x0204`, `0x0305`, `0x0403` | Invalid length in `Mem_Read()` |
-| `SWS_Mem_00007` | Runtime | `0x0405`, `0x0801` | `Mem_Read()` while previous job is pending |
-| `SWS_Mem_00030` | Runtime | `0x0302` | Accepted request changes state to `MEM_JOB_PENDING` |
-| `SWS_Mem_10010` | Runtime | `0x0303`, `0x0401`, `0x0501`, `0x0601`, `0x0701` | `Mem_MainFunction()` scheduled processing |
-| `SWS_Mem_00066` | Runtime | `0x0303`, `0x0401`, `0x0501`, `0x0601`, `0x0701` | Asynchronous services are executed in `Mem_MainFunction()` |
-| `SWS_Mem_00067` | Runtime | `0x0303`, `0x0401`, `0x0501`, `0x0601`, `0x0701` | Successful jobs finish with `MEM_JOB_OK` |
-| `SWS_Mem_10013` | Runtime | `0x0501`, `0x0502`, `0x0503`, `0x0504`, `0x0505`, `0x0506` | `Mem_Write()` API behavior |
-| `SWS_Mem_00009` | Runtime | `0x0503` | Invalid instance ID in `Mem_Write()` |
-| `SWS_Mem_00010` | Runtime | `0x0504` | `Mem_Write(NULL_PTR)` DET |
-| `SWS_Mem_00011` | Runtime | `0x0502` | Invalid address in `Mem_Write()` |
-| `SWS_Mem_00012` | Runtime | `0x0505` | Invalid length in `Mem_Write()` |
-| `SWS_Mem_00013` | Runtime | `0x0506` | `Mem_Write()` while previous job is pending |
-| `SWS_Mem_10014` | Runtime | `0x0601`, `0x0602`, `0x0603`, `0x0604`, `0x0605`, `0x0606` | `Mem_Erase()` API behavior |
-| `SWS_Mem_00015` | Runtime | `0x0604` | Invalid instance ID in `Mem_Erase()` |
-| `SWS_Mem_00016` | Runtime | `0x0602`, `0x0603` | Invalid address in `Mem_Erase()` |
-| `SWS_Mem_00017` | Runtime | `0x0605` | Invalid length in `Mem_Erase()` |
-| `SWS_Mem_00018` | Runtime | `0x0606` | `Mem_Erase()` while previous job is pending |
-| `SWS_Mem_00035` | Runtime | `0x0602` | No erase alignment adjustment; misaligned sector request is rejected |
-| `SWS_Mem_10016` | Runtime | `0x0701`, `0x0702`, `0x0703`, `0x0704`, `0x0705`, `0x0706` | `Mem_BlankCheck()` API behavior |
-| `SWS_Mem_00022` | Runtime | `0x0703` | Invalid instance ID in `Mem_BlankCheck()` |
-| `SWS_Mem_00023` | Runtime | `0x0704` | Invalid address in `Mem_BlankCheck()` |
-| `SWS_Mem_00024` | Runtime | `0x0705` | Invalid length in `Mem_BlankCheck()` |
-| `SWS_Mem_00025` | Runtime | `0x0706` | `Mem_BlankCheck()` while previous job is pending |
-| `SWS_Mem_00076` | Runtime | `0x0702` | Completed job with unexpected result reports `MEM_INCONSISTENT` |
-| `SWS_Mem_00057` | Runtime | `0x0801` | One job at a time per driver instance |
-| `SWS_Mem_10015` | Runtime | `0x0802`, `0x0806` | `Mem_PropagateError()` API behavior |
-| `SWS_Mem_00061` | Runtime | `0x0802` | `Mem_PropagateError()` sets `MEM_ECC_UNCORRECTED` and cancels the current job |
-| `SWS_Mem_00020` | Runtime | `0x0806` | Invalid instance ID in `Mem_PropagateError()` |
-| `SWS_Mem_10017` | Runtime | `0x0803`, `0x0807`, `0x0808`, `0x0809` | `Mem_HwSpecificService()` API behavior |
-| `SWS_Mem_00070` | Runtime | `0x0803` | Unsupported optional service returns `E_MEM_SERVICE_NOT_AVAIL` |
-| `SWS_Mem_00026` | Runtime | `0x0807` | Invalid instance ID in `Mem_HwSpecificService()` |
-| `SWS_Mem_00027` | Runtime | `0x0808`, `0x0809` | Null pointer handling in `Mem_HwSpecificService()` |
-| `SWS_Mem_10024` | Runtime | `0x0804`, `0x0810` | `Mem_Suspend()` API behavior |
-| `SWS_Mem_00082` | Runtime | `0x0804`, `0x0805` | Unsupported suspend/resume returns `E_MEM_SERVICE_NOT_AVAIL` |
-| `SWS_Mem_00091` | Runtime | `0x0810` | Invalid instance ID in `Mem_Suspend()` |
-| `SWS_Mem_10025` | Runtime | `0x0805`, `0x0811` | `Mem_Resume()` API behavior |
-| `SWS_Mem_00092` | Runtime | `0x0811` | Invalid instance ID in `Mem_Resume()` |
-| `SWS_Mem_00088` | Runtime plus review | `0x0501`, `0x0601`, `0x0701`, `0x0702` | Runtime tests confirm upper-layer read-back and blank-check strategy; proving the driver does not self-verify is an inspection activity |
+| `SWS_Mem_10008` | Runtime | `0x0101`, `0x0103` | Hành vi API `Mem_Init()` |
+| `SWS_Mem_00001` | Runtime | `0x0101`, `0x0301` | Kết quả job ban đầu trở thành `MEM_JOB_OK` |
+| `SWS_Mem_00087` | Runtime | `0x0103` | `configPtr` phải là `NULL_PTR` |
+| `SWS_Mem_10009` | Runtime | `0x0102`, `0x0104` | Hành vi API `Mem_GetVersionInfo()` |
+| `SWS_Mem_00002` | Runtime | `0x0104` | DET của `Mem_GetVersionInfo(NULL_PTR)` |
+| `SWS_Mem_10018` | Runtime | `0x0105` | Hành vi API `Mem_DeInit()` |
+| `SWS_Mem_00079` | Runtime và review | `0x0105` | Runtime kiểm tra trạng thái đã hủy khởi tạo; việc hủy hoàn toàn Flash đang chạy vẫn bị giới hạn bởi Flash single-bank STM32F401 |
+| `Section7.3.1` | Runtime | `0x0105`, `0x0201` | API, ngoài ngoại lệ được cho phép, yêu cầu khởi tạo |
+| `SWS_Mem_00052` | Runtime | `0x0105`, `0x0201`, `0x0202`, `0x0203`, `0x0204`, `0x0205`, `0x0304`, `0x0402`, `0x0403`, `0x0404`, `0x0502`, `0x0503`, `0x0504`, `0x0505`, `0x0602`, `0x0603`, `0x0604`, `0x0605`, `0x0703`, `0x0704`, `0x0705`, `0x0806`, `0x0807`, `0x0808`, `0x0809`, `0x0810`, `0x0811` | Phân loại development error được target test thực thi |
+| `SWS_Mem_10011` | Runtime | `0x0301`, `0x0304` | Hành vi API `Mem_GetJobResult()` |
+| `SWS_Mem_00029` | Runtime | `0x0301`, `0x0302`, `0x0305` | Driver theo dõi kết quả job hiện tại |
+| `SWS_Mem_00090` | Runtime | `0x0304` | Instance ID không hợp lệ trong `Mem_GetJobResult()` |
+| `SWS_Mem_00059` | Runtime | `0x0305`, `0x0801` | Job request không thể xử lý bị từ chối bằng `E_NOT_OK` |
+| `SWS_Mem_10012` | Runtime | `0x0202`, `0x0203`, `0x0204`, `0x0205`, `0x0302`, `0x0303`, `0x0305`, `0x0401`, `0x0402`, `0x0403`, `0x0404`, `0x0405`, `0x0801` | Hành vi API `Mem_Read()` |
+| `SWS_Mem_00004` | Runtime | `0x0205`, `0x0404` | Instance ID không hợp lệ trong `Mem_Read()` |
+| `SWS_Mem_00005` | Runtime | `0x0202` | DET của `Mem_Read(NULL_PTR)` |
+| `SWS_Mem_00006` | Runtime | `0x0203`, `0x0402` | Địa chỉ không hợp lệ trong `Mem_Read()` |
+| `SWS_Mem_00072` | Runtime | `0x0204`, `0x0305`, `0x0403` | Độ dài không hợp lệ trong `Mem_Read()` |
+| `SWS_Mem_00007` | Runtime | `0x0405`, `0x0801` | `Mem_Read()` khi job trước đang pending |
+| `SWS_Mem_00030` | Runtime | `0x0302` | Yêu cầu đã chấp nhận đổi trạng thái thành `MEM_JOB_PENDING` |
+| `SWS_Mem_10010` | Runtime | `0x0303`, `0x0401`, `0x0501`, `0x0601`, `0x0701` | Xử lý được lập lịch bởi `Mem_MainFunction()` |
+| `SWS_Mem_00066` | Runtime | `0x0303`, `0x0401`, `0x0501`, `0x0601`, `0x0701` | Dịch vụ bất đồng bộ được thực thi trong `Mem_MainFunction()` |
+| `SWS_Mem_00067` | Runtime | `0x0303`, `0x0401`, `0x0501`, `0x0601`, `0x0701` | Job thành công kết thúc với `MEM_JOB_OK` |
+| `SWS_Mem_10013` | Runtime | `0x0501`, `0x0502`, `0x0503`, `0x0504`, `0x0505`, `0x0506` | Hành vi API `Mem_Write()` |
+| `SWS_Mem_00009` | Runtime | `0x0503` | Instance ID không hợp lệ trong `Mem_Write()` |
+| `SWS_Mem_00010` | Runtime | `0x0504` | DET của `Mem_Write(NULL_PTR)` |
+| `SWS_Mem_00011` | Runtime | `0x0502` | Địa chỉ không hợp lệ trong `Mem_Write()` |
+| `SWS_Mem_00012` | Runtime | `0x0505` | Độ dài không hợp lệ trong `Mem_Write()` |
+| `SWS_Mem_00013` | Runtime | `0x0506` | `Mem_Write()` khi job trước đang pending |
+| `SWS_Mem_10014` | Runtime | `0x0601`, `0x0602`, `0x0603`, `0x0604`, `0x0605`, `0x0606` | Hành vi API `Mem_Erase()` |
+| `SWS_Mem_00015` | Runtime | `0x0604` | Instance ID không hợp lệ trong `Mem_Erase()` |
+| `SWS_Mem_00016` | Runtime | `0x0602`, `0x0603` | Địa chỉ không hợp lệ trong `Mem_Erase()` |
+| `SWS_Mem_00017` | Runtime | `0x0605` | Độ dài không hợp lệ trong `Mem_Erase()` |
+| `SWS_Mem_00018` | Runtime | `0x0606` | `Mem_Erase()` khi job trước đang pending |
+| `SWS_Mem_00035` | Runtime | `0x0602` | Không tự điều chỉnh căn chỉnh xóa; yêu cầu sector không căn phải bị từ chối |
+| `SWS_Mem_10016` | Runtime | `0x0701`, `0x0702`, `0x0703`, `0x0704`, `0x0705`, `0x0706` | Hành vi API `Mem_BlankCheck()` |
+| `SWS_Mem_00022` | Runtime | `0x0703` | Instance ID không hợp lệ trong `Mem_BlankCheck()` |
+| `SWS_Mem_00023` | Runtime | `0x0704` | Địa chỉ không hợp lệ trong `Mem_BlankCheck()` |
+| `SWS_Mem_00024` | Runtime | `0x0705` | Độ dài không hợp lệ trong `Mem_BlankCheck()` |
+| `SWS_Mem_00025` | Runtime | `0x0706` | `Mem_BlankCheck()` khi job trước đang pending |
+| `SWS_Mem_00076` | Runtime | `0x0702` | Job hoàn tất có kết quả không như kỳ vọng báo `MEM_INCONSISTENT` |
+| `SWS_Mem_00057` | Runtime | `0x0801` | Mỗi driver instance chỉ có một job tại một thời điểm |
+| `SWS_Mem_10015` | Runtime | `0x0802`, `0x0806` | Hành vi API `Mem_PropagateError()` |
+| `SWS_Mem_00061` | Runtime | `0x0802` | `Mem_PropagateError()` đặt `MEM_ECC_UNCORRECTED` và hủy job hiện tại |
+| `SWS_Mem_00020` | Runtime | `0x0806` | Instance ID không hợp lệ trong `Mem_PropagateError()` |
+| `SWS_Mem_10017` | Runtime | `0x0803`, `0x0807`, `0x0808`, `0x0809` | Hành vi API `Mem_HwSpecificService()` |
+| `SWS_Mem_00070` | Runtime | `0x0803` | Optional service không hỗ trợ trả `E_MEM_SERVICE_NOT_AVAIL` |
+| `SWS_Mem_00026` | Runtime | `0x0807` | Instance ID không hợp lệ trong `Mem_HwSpecificService()` |
+| `SWS_Mem_00027` | Runtime | `0x0808`, `0x0809` | Xử lý null pointer trong `Mem_HwSpecificService()` |
+| `SWS_Mem_10024` | Runtime | `0x0804`, `0x0810` | Hành vi API `Mem_Suspend()` |
+| `SWS_Mem_00082` | Runtime | `0x0804`, `0x0805` | Suspend/resume không hỗ trợ trả `E_MEM_SERVICE_NOT_AVAIL` |
+| `SWS_Mem_00091` | Runtime | `0x0810` | Instance ID không hợp lệ trong `Mem_Suspend()` |
+| `SWS_Mem_10025` | Runtime | `0x0805`, `0x0811` | Hành vi API `Mem_Resume()` |
+| `SWS_Mem_00092` | Runtime | `0x0811` | Instance ID không hợp lệ trong `Mem_Resume()` |
+| `SWS_Mem_00088` | Runtime và review | `0x0501`, `0x0601`, `0x0701`, `0x0702` | Runtime test xác nhận chiến lược đọc lại và blank-check của upper layer; việc chứng minh driver không tự xác minh là hoạt động inspection |
 
-## Review-Only Or Not-Applicable Requirements
+## Requirement Chỉ Review Hoặc Không Áp Dụng
 
-| Requirement | Status | Reason |
+| Requirement | Trạng thái | Lý do |
 | --- | --- | --- |
-| `SWS_Mem_00031` | Review only | A deterministic target-runtime fault injection path for “accepted request later becomes hardware-failed” is not implemented in this STM32F401 reference test suite. |
-| `SWS_Mem_00080` | Not applicable on this port | STM32F401 internal flash suspend is not supported by this reference driver; `SWS_Mem_00082` governs the observable runtime behavior. |
-| `SWS_Mem_00081` | Not applicable on this port | STM32F401 internal flash resume is not supported by this reference driver; `SWS_Mem_00082` governs the observable runtime behavior. |
-| `SWS_Mem_00083` | Not applicable on this port | Requirement only applies when suspend support exists. |
-| `SWS_Mem_00084` | Not applicable on this port | Requirement only applies when resume support exists. |
+| `SWS_Mem_00031` | Chỉ review | Bộ test tham chiếu STM32F401 chưa có đường fault injection runtime xác định cho trường hợp yêu cầu được chấp nhận nhưng sau đó lỗi phần cứng. |
+| `SWS_Mem_00080` | Không áp dụng cho port này | Flash nội STM32F401 không được reference driver hỗ trợ suspend; `SWS_Mem_00082` điều khiển hành vi runtime quan sát được. |
+| `SWS_Mem_00081` | Không áp dụng cho port này | Flash nội STM32F401 không được reference driver hỗ trợ resume; `SWS_Mem_00082` điều khiển hành vi runtime quan sát được. |
+| `SWS_Mem_00083` | Không áp dụng cho port này | Requirement chỉ áp dụng khi có hỗ trợ suspend. |
+| `SWS_Mem_00084` | Không áp dụng cho port này | Requirement chỉ áp dụng khi có hỗ trợ resume. |
 
-## STM32F401 Execution Notes
+## Ghi Chú Thực Thi STM32F401
 
-- Destructive flash tests are restricted to one reserved sector:
+- Test Flash phá hủy dữ liệu chỉ dùng một sector dành riêng:
   - `TEST_FLASH_SECTOR_ADDRESS = 0x08060000`
   - `TEST_FLASH_SECTOR_LENGTH = 0x00020000`
-- The framework checks that the linked image end stays below that sector before write/erase/blank-check tests are allowed.
-- Non-destructive DET and pending-job tests deliberately avoid calling `Mem_MainFunction()` after job acceptance, so they can verify queued-job behavior without touching flash contents.
+- Khung test kiểm tra điểm cuối image sau liên kết phải nằm dưới sector đó trước khi cho phép test write/erase/blank-check.
+- Test DET và pending-job không phá hủy dữ liệu chủ ý không gọi `Mem_MainFunction()` sau khi job được chấp nhận, để kiểm tra hành vi xếp hàng mà không thay đổi nội dung Flash.

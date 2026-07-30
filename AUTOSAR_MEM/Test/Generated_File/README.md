@@ -1,3 +1,3 @@
-# Generated Test Artifacts
+# Tệp Test Được Sinh
 
-- `Mem_Test_Traceability.md`: requirement-first coverage matrix for the STM32 register-level AUTOSAR MemoryDriver test suite, including runtime-covered, review-only, and not-applicable requirements.
+- `Mem_Test_Traceability.md`: ma trận coverage theo Requirement cho bộ test AUTOSAR MemoryDriver mức thanh ghi trên STM32, gồm Requirement được kiểm tra runtime, chỉ review và không áp dụng.

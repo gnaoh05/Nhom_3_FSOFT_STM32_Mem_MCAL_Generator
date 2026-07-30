@@ -3,11 +3,11 @@
 /*======================================================================================
  * Development Error Tracer
  *
- * This is a lightweight DET implementation intended for AUTOSAR Memory Driver
- * integration on STM32F401RE.
+ * Đây là hiện thực DET tối giản dùng để tích hợp AUTOSAR Memory Driver
+ * trên STM32F401RE.
  *
- * The implementation stores the last reported error, allowing the debugger or
- * application to inspect development errors during integration testing.
+ * Hiện thực lưu lỗi được báo gần nhất, cho phép debugger hoặc ứng dụng kiểm tra
+ * development error trong quá trình integration test.
  *=====================================================================================*/
 
 volatile Det_LastErrorType Det_LastError =

@@ -1,21 +1,20 @@
 /**********************************************************************************************************************
  *  FILE:         Mem.c
  *  MODULE:       Mem (Memory Driver)
- *  DESCRIPTION:  Implementation of the AUTOSAR Classic Platform Memory Driver, according to
+ *  MÔ TẢ:        Hiện thực Memory Driver của AUTOSAR Classic Platform theo
  *                AUTOSAR_CP_SWS_MemoryDriver, Document ID 1018, AUTOSAR CP R25-11.
  *
- *  REVISION NOTE (v2): Reworked so that asynchronous services (Read/Write/Erase/BlankCheck/
- *                HwSpecificService) only validate parameters and record the request synchronously;
- *                the actual hardware trigger now happens inside Mem_MainFunction(), per [SWS_Mem_00066]
+ *  GHI CHÚ HIỆU CHỈNH (v2): Các dịch vụ bất đồng bộ (Read/Write/Erase/BlankCheck/
+ *                HwSpecificService) chỉ kiểm tra tham số và lưu yêu cầu một cách đồng bộ;
+ *                thao tác kích hoạt phần cứng thực sự diễn ra trong Mem_MainFunction(), theo [SWS_Mem_00066]
  *                ("All job requests triggered by asynchronous Mem driver services shall be executed
- *                within the Mem_MainFunction"). v1 triggered the hardware operation directly from the
- *                API call, which under a strict reading of 00066 was a deviation - see project
- *                traceability review.
+ *                within the Mem_MainFunction"). Phiên bản v1 kích hoạt phần cứng trực tiếp từ lời gọi
+ *                API; khi diễn giải nghiêm ngặt 00066, đây là một sai lệch, xem phần traceability của dự án.
  *
- *  TRACEABILITY: Every DET/behavioral check below is commented with the exact [SWS_Mem_xxxxx] requirement
- *                it implements. Where this driver adds a check that is NOT backed by a currently active
- *                numbered requirement in this document revision (R25-11), that is stated explicitly
- *                instead of citing a fabricated ID - see e.g. the MEM_E_UNINIT notes below.
+ *  TRACEABILITY: Mỗi kiểm tra DET/hành vi bên dưới đều ghi đúng Requirement [SWS_Mem_xxxxx]
+ *                tương ứng. Khi driver có kiểm tra không được một Requirement đánh số còn hiệu lực
+ *                trong phiên bản tài liệu này (R25-11) yêu cầu, điều đó được nêu rõ thay vì viện dẫn
+ *                một mã không có thật, xem ghi chú MEM_E_UNINIT bên dưới.
  *********************************************************************************************************************/
 
 #include "Mem.h"
@@ -26,7 +25,7 @@
 #endif
 
 /*======================================================================================================================
- *  MODULE STATE
+ *  TRẠNG THÁI MODULE
  *====================================================================================================================*/
 typedef enum
 {
@@ -36,14 +35,14 @@ typedef enum
 
 typedef struct
 {
-    MemAcc_MemJobResultType JobResult;      /* result of the last processed job, see 7.2.1.1        */
-    boolean                 JobPending;     /* TRUE from job acceptance until job completion         */
-    boolean                 SuspendActive;  /* TRUE while the current job is suspended                */
+    MemAcc_MemJobResultType JobResult;      /* kết quả của job đã xử lý gần nhất, xem 7.2.1.1         */
+    boolean                 JobPending;     /* TRUE từ lúc job được chấp nhận đến khi hoàn tất         */
+    boolean                 SuspendActive;  /* TRUE khi job hiện tại đang tạm dừng                     */
 } Mem_InstanceRuntimeType;
 
-/* Which asynchronous service is queued for the instance, and its parameters - needed because, per
- * [SWS_Mem_00066], the actual Mem_Ipw_xxx() trigger call must happen inside Mem_MainFunction(), not in
- * the API call itself. Only one entry per instance is ever in use, consistent with [SWS_Mem_00057]. */
+/* Dịch vụ bất đồng bộ nào được xếp hàng cho instance và các tham số của nó. Theo
+ * [SWS_Mem_00066], lời gọi kích hoạt Mem_Ipw_xxx() phải diễn ra trong Mem_MainFunction(), không phải
+ * trực tiếp trong API. Mỗi instance chỉ dùng một phần tử, phù hợp với [SWS_Mem_00057]. */
 typedef enum
 {
     MEM_OP_NONE = 0,
@@ -59,12 +58,12 @@ typedef struct
     Mem_OperationType    Operation;
     Mem_AddressType       Address;
     Mem_LengthType        Length;
-    Mem_DataType*         DestPtr;     /* Mem_Read() destination buffer                      */
-    const Mem_DataType*   SrcPtr;      /* Mem_Write() source buffer                          */
-    Mem_HwServiceIdType   HwServiceId; /* Mem_HwSpecificService() service selector           */
-    Mem_DataType*         HwDataPtr;   /* Mem_HwSpecificService() data buffer                */
-    Mem_LengthType*       HwLengthPtr; /* Mem_HwSpecificService() length pointer             */
-    boolean                Started;    /* TRUE once Mem_Ipw_xxx() has actually been called   */
+    Mem_DataType*         DestPtr;     /* bộ đệm đích của Mem_Read()                         */
+    const Mem_DataType*   SrcPtr;      /* bộ đệm nguồn của Mem_Write()                       */
+    Mem_HwServiceIdType   HwServiceId; /* bộ chọn dịch vụ Mem_HwSpecificService()            */
+    Mem_DataType*         HwDataPtr;   /* bộ đệm dữ liệu Mem_HwSpecificService()             */
+    Mem_LengthType*       HwLengthPtr; /* con trỏ độ dài Mem_HwSpecificService()             */
+    boolean                Started;    /* TRUE khi Mem_Ipw_xxx() đã được gọi thực sự          */
 } Mem_PendingRequestType;
 
 static Mem_StateType           Mem_ModuleState = MEM_UNINIT;
@@ -72,7 +71,7 @@ static Mem_InstanceRuntimeType Mem_InstanceRuntime[MEM_INSTANCE_COUNT];
 static Mem_PendingRequestType  Mem_PendingRequest[MEM_INSTANCE_COUNT];
 
 /*======================================================================================================================
- *  DET REPORTING MACRO
+ *  MACRO BÁO LỖI DET
  *====================================================================================================================*/
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
 #define MEM_DET_REPORT_ERROR(ApiId, ErrorId) \
@@ -82,26 +81,25 @@ static Mem_PendingRequestType  Mem_PendingRequest[MEM_INSTANCE_COUNT];
 #endif
 
 /*======================================================================================================================
- *  LOCAL PARAMETER VALIDATION HELPERS
- *  Each helper performs the check mandated by the referenced [SWS_Mem_xxxxx] requirement and, if
- *  MEM_DEV_ERROR_DETECT == STD_ON, reports the corresponding development error via Det_ReportError().
- *  Returns TRUE if the checked parameter is valid, FALSE otherwise.
+ *  HÀM HỖ TRỢ KIỂM TRA THAM SỐ CỤC BỘ
+ *  Mỗi hàm thực hiện kiểm tra theo Requirement [SWS_Mem_xxxxx] được viện dẫn và, nếu
+ *  MEM_DEV_ERROR_DETECT == STD_ON, báo development error tương ứng bằng Det_ReportError().
+ *  Trả về TRUE nếu tham số hợp lệ, ngược lại trả về FALSE.
  *====================================================================================================================*/
 
-/* NOTE ON MEM_E_UNINIT: [SWS_Mem_00052] lists "API service called without module initialization" as a
- * valid development error (MEM_E_UNINIT). However, this document revision (R25-11) does not carry a
- * currently active, per-function numbered requirement mandating this specific check for Mem_Read/Write/
- * Erase/BlankCheck/HwSpecificService/Suspend/Resume (candidate IDs such as [SWS_Mem_00003]/[SWS_Mem_00008]
- * were DELETED in R23-11, see Appendix A.3.3). The check below is retained as defensive good practice,
- * consistent with the still-active error table [SWS_Mem_00052] and with SRS_BSW general conventions, but
- * is NOT traceable to one specific still-active numbered SWS_Mem requirement. */
+/* GHI CHÚ VỀ MEM_E_UNINIT: [SWS_Mem_00052] liệt kê "API service called without module initialization" là
+ * development error hợp lệ (MEM_E_UNINIT). Tuy nhiên, phiên bản tài liệu này (R25-11) không có Requirement
+ * đánh số, còn hiệu lực và riêng cho từng hàm để bắt buộc kiểm tra này với Mem_Read/Write/Erase/BlankCheck/
+ * HwSpecificService/Suspend/Resume (các mã dự kiến như [SWS_Mem_00003]/[SWS_Mem_00008] đã bị DELETED trong
+ * R23-11, xem Appendix A.3.3). Kiểm tra bên dưới vẫn được giữ lại như một biện pháp phòng vệ, phù hợp bảng lỗi
+ * [SWS_Mem_00052] còn hiệu lực và quy ước chung SRS_BSW, nhưng không trace được tới một SWS_Mem cụ thể còn hiệu lực. */
 static boolean Mem_CheckModuleInit(uint8 apiId)
 {
     boolean valid = (boolean)(Mem_ModuleState == MEM_INIT);
 
     if (valid == FALSE)
     {
-        MEM_DET_REPORT_ERROR(apiId, MEM_E_UNINIT); /* [SWS_Mem_00052] error table; see note above */
+        MEM_DET_REPORT_ERROR(apiId, MEM_E_UNINIT); /* bảng lỗi [SWS_Mem_00052], xem ghi chú bên trên */
     }
 
     return valid;
@@ -129,8 +127,8 @@ static boolean Mem_CheckPointer(const void* ptr, uint8 apiId)
     if (valid == FALSE)
     {
         /* [SWS_Mem_00005](Read destinationDataPtr) [SWS_Mem_00010](Write sourceDataPtr)
-         * [SWS_Mem_00027](HwSpecificService dataPtr/lengthPtr) [SWS_Mem_00087](Init configPtr - inverted
-         * polarity, see Mem_Init()) [SWS_Mem_00002](GetVersionInfo versionInfoPtr) */
+         * [SWS_Mem_00027](HwSpecificService dataPtr/lengthPtr) [SWS_Mem_00087](Init configPtr - đảo
+         * điều kiện, xem Mem_Init()) [SWS_Mem_00002](GetVersionInfo versionInfoPtr) */
         MEM_DET_REPORT_ERROR(apiId, MEM_E_PARAM_POINTER);
     }
 
@@ -168,11 +166,10 @@ static boolean Mem_CheckLength(
 }
 
 /* [SWS_Mem_00035]: "The Mem driver shall not perform any sort of address or length alignment in case
- * physical segmentation needs to be considered" - i.e. Erase requests that do not exactly match one
- * physical sector (see Flash_IP_Cfg.c) must be REJECTED, never silently rounded/padded. This document
- * does not define a dedicated error code for "not aligned to physical segmentation", so the rejection is
- * reported via the same MEM_E_PARAM_ADDRESS code used for the generic address check ([SWS_Mem_00016]),
- * since a non-sector-aligned address is a form of invalid address for an Erase request specifically. */
+ * physical segmentation needs to be considered". Nghĩa là yêu cầu Erase không khớp chính xác một sector
+ * vật lý (xem Flash_IP_Cfg.c) phải bị REJECTED, không được tự động làm tròn hoặc đệm. Tài liệu không định
+ * nghĩa mã lỗi riêng cho trường hợp không căn theo phân đoạn vật lý, nên dùng MEM_E_PARAM_ADDRESS như kiểm tra
+ * địa chỉ tổng quát ([SWS_Mem_00016]); với Mem_Erase, địa chỉ không căn sector là một dạng địa chỉ không hợp lệ. */
 static boolean Mem_CheckEraseAlignment(
         Mem_InstanceIdType instanceId,
         Mem_AddressType     address,
@@ -191,14 +188,14 @@ static boolean Mem_CheckEraseAlignment(
 
 static boolean Mem_CheckJobPending(Mem_InstanceIdType instanceId, uint8 apiId)
 {
-    /* [SRS_MemHwAb_14050] / [SWS_Mem_00057] only one job at a time per instance */
+    /* [SRS_MemHwAb_14050] / [SWS_Mem_00057]: mỗi instance chỉ có một job tại một thời điểm */
     boolean valid = (boolean)(Mem_InstanceRuntime[instanceId].JobPending == FALSE);
 
     if (valid == FALSE)
     {
         /* [SWS_Mem_00007](Read) [SWS_Mem_00013](Write) [SWS_Mem_00018](Erase) [SWS_Mem_00025](BlankCheck).
-         * No numbered SWS_Mem requirement exists for HwSpecificService specifically; applied there too
-         * for consistency with [SRS_MemHwAb_14050] (one job per instance, without exception per service). */
+         * Không có SWS_Mem đánh số riêng cho HwSpecificService; kiểm tra vẫn áp dụng để phù hợp
+         * [SRS_MemHwAb_14050] (mỗi instance một job, không ngoại lệ theo từng dịch vụ). */
         MEM_DET_REPORT_ERROR(apiId, MEM_E_JOB_PENDING);
     }
 
@@ -206,7 +203,7 @@ static boolean Mem_CheckJobPending(Mem_InstanceIdType instanceId, uint8 apiId)
 }
 
 /*======================================================================================================================
- *  8.3.1  SYNCHRONOUS FUNCTIONS
+ *  8.3.1  HÀM ĐỒNG BỘ
  *====================================================================================================================*/
 
 /* [SWS_Mem_10008] */
@@ -214,7 +211,7 @@ void Mem_Init(const Mem_ConfigType* configPtr)
 {
     Mem_InstanceIdType i;
 
-    /* [SWS_Mem_00087] configPtr is currently not used and shall be a NULL pointer */
+    /* [SWS_Mem_00087]: configPtr hiện chưa dùng và phải là NULL pointer */
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
     if (configPtr != NULL_PTR)
     {
@@ -250,8 +247,8 @@ void Mem_DeInit(void)
     {
         for (i = 0u; i < (Mem_InstanceIdType)MEM_INSTANCE_COUNT; i++)
         {
-            /* [SWS_Mem_00079] cancel any ongoing operation in the hardware (best-effort - see Flash_IP.c for
-             * the single-Flash-bank limitation on truly aborting an in-flight BSY operation) */
+            /* [SWS_Mem_00079]: hủy thao tác phần cứng đang diễn ra theo khả năng tốt nhất. Xem Flash_IP.c về
+             * giới hạn single Flash bank: không thể hủy tuyệt đối thao tác đang có BSY. */
             Mem_Ipw_DeInit(i);
 
             Mem_InstanceRuntime[i].JobPending    = FALSE;
@@ -308,7 +305,7 @@ Std_ReturnType Mem_Suspend(Mem_InstanceIdType instanceId)
         }
         else if (Mem_InstanceRuntime[instanceId].SuspendActive == TRUE)
         {
-            retVal = E_NOT_OK; /* [SWS_Mem_00083] already suspended, reject without further action */
+            retVal = E_NOT_OK; /* [SWS_Mem_00083]: đã tạm dừng, từ chối mà không thực hiện thêm */
         }
         else
         {
@@ -338,7 +335,7 @@ Std_ReturnType Mem_Resume(Mem_InstanceIdType instanceId)
         }
         else if (Mem_InstanceRuntime[instanceId].SuspendActive == FALSE)
         {
-            retVal = E_NOT_OK; /* [SWS_Mem_00084] no suspend pending, reject without further action */
+            retVal = E_NOT_OK; /* [SWS_Mem_00084]: không có suspend chờ, từ chối mà không thực hiện thêm */
         }
         else
         {
@@ -360,7 +357,7 @@ void Mem_PropagateError(Mem_InstanceIdType instanceId)
     if ((Mem_CheckModuleInit(MEM_SID_PROPAGATE_ERROR) == TRUE) &&
         (Mem_CheckInstanceId(instanceId, MEM_SID_PROPAGATE_ERROR) == TRUE)) /* [SWS_Mem_00020] */
     {
-        /* [SWS_Mem_00061] set job result to MEM_ECC_UNCORRECTED and cancel current job processing */
+        /* [SWS_Mem_00061]: đặt kết quả job là MEM_ECC_UNCORRECTED và hủy xử lý job hiện tại */
         Mem_InstanceRuntime[instanceId].JobResult  = MEM_ECC_UNCORRECTED;
         Mem_InstanceRuntime[instanceId].JobPending = FALSE;
 
@@ -370,11 +367,10 @@ void Mem_PropagateError(Mem_InstanceIdType instanceId)
 }
 
 /*======================================================================================================================
- *  8.3.2  ASYNCHRONOUS FUNCTIONS
- *  Per [SWS_Mem_00066], these functions validate parameters and record accepted requests; the actual
- *  Mem_Ipw_xxx() hardware trigger is performed later, inside Mem_MainFunction() below. Optional services
- *  that are not implemented for the memory technology are rejected synchronously with
- *  E_MEM_SERVICE_NOT_AVAIL per [SWS_Mem_00070].
+ *  8.3.2  HÀM BẤT ĐỒNG BỘ
+ *  Theo [SWS_Mem_00066], các hàm này kiểm tra tham số và lưu yêu cầu đã chấp nhận; việc kích hoạt phần cứng
+ *  Mem_Ipw_xxx() diễn ra sau đó trong Mem_MainFunction(). Dịch vụ tùy chọn không được hiện thực cho công nghệ
+ *  bộ nhớ sẽ bị từ chối đồng bộ bằng E_MEM_SERVICE_NOT_AVAIL theo [SWS_Mem_00070].
  *====================================================================================================================*/
 
 /* [SWS_Mem_10012] */
@@ -402,9 +398,9 @@ Std_ReturnType Mem_Read(
         Mem_InstanceRuntime[instanceId].JobPending = TRUE;
         Mem_InstanceRuntime[instanceId].JobResult  = MEM_JOB_PENDING; /* [SWS_Mem_00030] */
 
-        retVal = E_OK; /* job accepted; hardware trigger deferred to Mem_MainFunction() [SWS_Mem_00066] */
+        retVal = E_OK; /* job được chấp nhận; kích hoạt phần cứng hoãn đến Mem_MainFunction() [SWS_Mem_00066] */
     }
-    /* else: [SWS_Mem_00059] job rejected synchronously via E_NOT_OK, no state change */
+    /* else: [SWS_Mem_00059]: job bị từ chối đồng bộ bằng E_NOT_OK, không đổi trạng thái */
 
     return retVal;
 }
@@ -535,13 +531,13 @@ Std_ReturnType Mem_HwSpecificService(
 }
 
 /*======================================================================================================================
- *  8.5  SCHEDULED FUNCTIONS
+ *  8.5  HÀM ĐƯỢC LẬP LỊCH
  *====================================================================================================================*/
 
 /* [SWS_Mem_10010] Mem_MainFunction
- * [SWS_Mem_00066]: this is where every asynchronous job's hardware trigger actually happens (first pass,
- * Started == FALSE -> Started = TRUE), and where its completion is subsequently polled for (every pass
- * afterwards) via Mem_Ipw_MainFunction()/Mem_Ipw_GetJobResult(). */
+ * [SWS_Mem_00066]: tại đây mỗi job bất đồng bộ thực sự kích hoạt phần cứng (lần đầu,
+ * Started == FALSE -> Started = TRUE) và sau đó được kiểm tra hoàn tất ở mỗi lần gọi qua
+ * Mem_Ipw_MainFunction()/Mem_Ipw_GetJobResult(). */
 void Mem_MainFunction(void)
 {
     Mem_InstanceIdType i;
@@ -588,7 +584,7 @@ void Mem_MainFunction(void)
 
                         case MEM_OP_NONE:
                         default:
-                            /* Should not happen while JobPending == TRUE; defensively treat as failure. */
+                            /* Không được xảy ra khi JobPending == TRUE; xử lý phòng vệ là lỗi. */
                             break;
                     }
 
@@ -598,9 +594,9 @@ void Mem_MainFunction(void)
                     }
                     else
                     {
-                        /* Hardware rejected the trigger at the last moment even though Mem_xxx() already
-                         * validated parameters synchronously (should be rare / defensive path only).
-                         * [SWS_Mem_00031] pending job not able to complete -> MEM_JOB_FAILED. */
+                        /* Phần cứng từ chối kích hoạt dù Mem_xxx() đã kiểm tra tham số đồng bộ.
+                         * Đây chỉ là nhánh phòng vệ, hiếm khi xảy ra.
+                         * [SWS_Mem_00031]: pending job not able to complete -> MEM_JOB_FAILED. */
                         Mem_InstanceRuntime[i].JobResult  = MEM_JOB_FAILED;
                         Mem_InstanceRuntime[i].JobPending = FALSE;
 
@@ -617,7 +613,7 @@ void Mem_MainFunction(void)
                     if (Mem_InstanceRuntime[i].JobResult != MEM_JOB_PENDING)
                     {
                         /* [SWS_Mem_00067][SWS_Mem_00031][SWS_Mem_00076][SWS_Mem_00077][SWS_Mem_00078]
-                         * job finished (successfully, failed, inconsistent or ECC (un)corrected) */
+                         * job đã kết thúc: thành công, lỗi, không nhất quán hoặc ECC có/không thể sửa. */
                         Mem_InstanceRuntime[i].JobPending = FALSE;
                         Mem_PendingRequest[i].Started     = FALSE;
                         Mem_PendingRequest[i].Operation   = MEM_OP_NONE;

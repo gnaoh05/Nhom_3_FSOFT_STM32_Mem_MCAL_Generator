@@ -1,14 +1,14 @@
 /******************************************************************************
  * FILE: ELF_Read_Test.c
- * DESCRIPTION: Read-path tests for the AUTOSAR Mem driver
+ * MÔ TẢ: Test đường đọc cho AUTOSAR Mem driver
  ******************************************************************************/
 
 #include "ELF_Read_Test.h"
 #include "TestManager.h"
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00066], [SWS_Mem_00067], p.15,36
- * - Confirms a valid read request is executed by Mem_MainFunction() and copies the expected flash bytes.
+ * - Xác nhận yêu cầu đọc hợp lệ được Mem_MainFunction() thực thi và sao chép đúng byte Flash mong đợi.
  */
 static void ELF_READ_001(void)
 {
@@ -39,9 +39,9 @@ static void ELF_READ_001(void)
                                 (passed == TRUE) ? 1u : 0u);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00006], p.36
- * - Verifies Mem_Read() rejects an invalid address with MEM_E_PARAM_ADDRESS.
+ * - Kiểm tra Mem_Read() từ chối địa chỉ không hợp lệ với MEM_E_PARAM_ADDRESS.
  */
 static void ELF_READ_002(void)
 {
@@ -61,9 +61,9 @@ static void ELF_READ_002(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00072], p.36
- * - Verifies Mem_Read() rejects an invalid length with MEM_E_PARAM_LENGTH.
+ * - Kiểm tra Mem_Read() từ chối độ dài không hợp lệ với MEM_E_PARAM_LENGTH.
  */
 static void ELF_READ_003(void)
 {
@@ -87,9 +87,9 @@ static void ELF_READ_003(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00004], p.36
- * - Verifies Mem_Read() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ * - Kiểm tra Mem_Read() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
 static void ELF_READ_004(void)
 {
@@ -113,9 +113,9 @@ static void ELF_READ_004(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00007], p.36
- * - Verifies Mem_Read() rejects a second read request while a previous job is still pending.
+ * - Kiểm tra Mem_Read() từ chối yêu cầu đọc thứ hai khi job trước vẫn pending.
  */
 static void ELF_READ_005(void)
 {

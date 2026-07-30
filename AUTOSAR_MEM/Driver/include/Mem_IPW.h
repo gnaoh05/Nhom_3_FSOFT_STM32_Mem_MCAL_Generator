@@ -1,19 +1,18 @@
 /**********************************************************************************************************************
  *  FILE:         Mem_IPW.h
  *  MODULE:       Mem_IPW (Memory Driver - IP Wrapper Layer)
- *  DESCRIPTION:  Hardware wrapper layer used internally by Mem.c.
+ *  MÔ TẢ:        Lớp wrapper phần cứng được Mem.c sử dụng nội bộ.
  *
- *                AUTOSAR_CP_SWS_MemoryDriver does not itself define an "IPW" layer - it only requires that
- *                the Mem driver's public API (Mem.c) be memory-device agnostic ([SWS_Mem_00035]) and,
- *                when built as a separate binary, self-contained ([SWS_Mem_00039]). Following the common
- *                AUTOSAR MCAL convention (e.g. Fls_Ipw, Adc_Ipw, ...), Mem_IPW is the thin layer that sits
- *                between the SWS-compliant Mem.c and the actual memory device / IP register driver, so
- *                that porting to new hardware only requires re-implementing Mem_IPW.c.
+ *                AUTOSAR_CP_SWS_MemoryDriver không định nghĩa trực tiếp lớp "IPW"; nó chỉ yêu cầu public API
+ *                của Mem driver (Mem.c) không phụ thuộc thiết bị nhớ ([SWS_Mem_00035]) và khi build thành binary
+ *                riêng thì phải tự chứa ([SWS_Mem_00039]). Theo quy ước AUTOSAR MCAL, ví dụ Fls_Ipw, Adc_Ipw,
+ *                Mem_IPW là lớp mỏng giữa Mem.c tuân thủ SWS và driver thanh ghi/IP của thiết bị nhớ thực tế.
+ *                Nhờ đó, port sang phần cứng mới chỉ cần hiện thực lại Mem_IPW.c.
  *
- *                For this project, Mem_IPW.c wraps Flash_IP (Flash_IP.h/.c), the bare-metal register
- *                level driver for the STM32F401RE internal Flash. All chip-specific details (registers,
- *                sector geometry, IRQ handling) live in Flash_IP; Mem_IPW.c only translates between the
- *                Mem driver's generic instance-based API and Flash_IP's single-Flash-device API.
+ *                Trong dự án này, Mem_IPW.c wrapper Flash_IP (Flash_IP.h/.c), driver thanh ghi bare-metal
+ *                cho Flash nội STM32F401RE. Mọi chi tiết riêng chip như thanh ghi, hình học sector và IRQ
+ *                nằm trong Flash_IP; Mem_IPW.c chỉ chuyển đổi giữa API generic theo instance của Mem driver
+ *                và API một thiết bị Flash của Flash_IP.
  *********************************************************************************************************************/
 
 #ifndef MEM_IPW_H
@@ -22,20 +21,20 @@
 #include "Mem.h"
 
 /*======================================================================================================================
- *  Lifecycle
+ *  Vòng đời
  *====================================================================================================================*/
 
-/* Initializes hardware-specific state for one Mem driver instance. Called from Mem_Init() [SWS_Mem_00001]. */
+/* Khởi tạo trạng thái riêng phần cứng cho một Mem driver instance. Được gọi từ Mem_Init() [SWS_Mem_00001]. */
 extern void Mem_Ipw_Init(Mem_InstanceIdType instanceId);
 
-/* Cancels any ongoing hardware operation and de-initializes hardware state for one instance.
- * Called from Mem_DeInit() [SWS_Mem_00079]. */
+/* Hủy thao tác phần cứng đang chạy và hủy khởi tạo trạng thái phần cứng cho một instance.
+ * Được gọi từ Mem_DeInit() [SWS_Mem_00079]. */
 extern void Mem_Ipw_DeInit(Mem_InstanceIdType instanceId);
 
 /*======================================================================================================================
- *  Optional service capability queries
- *  Used by Mem.c to reject unavailable services synchronously with E_MEM_SERVICE_NOT_AVAIL, as required
- *  by [SWS_Mem_00070] and the Suspend/Resume rules in [SWS_Mem_00082].
+ *  Truy vấn khả năng dịch vụ tùy chọn
+ *  Mem.c dùng để từ chối đồng bộ dịch vụ không khả dụng bằng E_MEM_SERVICE_NOT_AVAIL theo
+ *  [SWS_Mem_00070] và quy tắc Suspend/Resume tại [SWS_Mem_00082].
  *====================================================================================================================*/
 
 extern boolean Mem_Ipw_IsHwSpecificServiceSupported(
@@ -45,9 +44,9 @@ extern boolean Mem_Ipw_IsHwSpecificServiceSupported(
 extern boolean Mem_Ipw_IsSuspendResumeSupported(Mem_InstanceIdType instanceId);
 
 /*======================================================================================================================
- *  Asynchronous memory operations
- *  Each function only triggers the hardware operation and returns immediately. Progress is advanced by
- *  Mem_Ipw_MainFunction() and the outcome is retrieved with Mem_Ipw_GetJobResult().
+ *  Thao tác bộ nhớ bất đồng bộ
+ *  Mỗi hàm chỉ kích hoạt thao tác phần cứng và trả về ngay. Tiến trình được xử lý bởi
+ *  Mem_Ipw_MainFunction() và kết quả lấy bằng Mem_Ipw_GetJobResult().
  *====================================================================================================================*/
 
 extern Std_ReturnType Mem_Ipw_Read(
@@ -86,21 +85,21 @@ extern Std_ReturnType Mem_Ipw_Suspend(Mem_InstanceIdType instanceId);
 extern Std_ReturnType Mem_Ipw_Resume(Mem_InstanceIdType instanceId);
 
 /*======================================================================================================================
- *  Scheduling / job result retrieval
+ *  Lập lịch / lấy kết quả job
  *====================================================================================================================*/
 
-/* Advances the ongoing hardware operation (if any) of the given instance by one step.
- * Called from Mem_MainFunction() [SWS_Mem_00066]. */
+/* Tiến thao tác phần cứng đang chạy, nếu có, của instance một bước.
+ * Được gọi từ Mem_MainFunction() [SWS_Mem_00066]. */
 extern void Mem_Ipw_MainFunction(Mem_InstanceIdType instanceId);
 
-/* Returns the current hardware job result for the given instance (MEM_JOB_OK / MEM_JOB_PENDING /
+/* Trả về kết quả job phần cứng hiện tại của instance (MEM_JOB_OK / MEM_JOB_PENDING /
  * MEM_JOB_FAILED / MEM_INCONSISTENT / MEM_ECC_CORRECTED / MEM_ECC_UNCORRECTED). */
 extern MemAcc_MemJobResultType Mem_Ipw_GetJobResult(Mem_InstanceIdType instanceId);
 
 /*======================================================================================================================
- *  Address / length validation helpers
- *  Used by Mem.c to implement [SWS_Mem_00006][SWS_Mem_00072][SWS_Mem_00011][SWS_Mem_00012]
- *  [SWS_Mem_00016][SWS_Mem_00017][SWS_Mem_00023][SWS_Mem_00024] development error checks.
+ *  Hàm hỗ trợ kiểm tra địa chỉ / độ dài
+ *  Mem.c dùng để hiện thực kiểm tra development error [SWS_Mem_00006][SWS_Mem_00072][SWS_Mem_00011]
+ *  [SWS_Mem_00012][SWS_Mem_00016][SWS_Mem_00017][SWS_Mem_00023][SWS_Mem_00024].
  *====================================================================================================================*/
 
 extern boolean Mem_Ipw_IsAddressValid(Mem_InstanceIdType instanceId, Mem_AddressType address);
@@ -110,9 +109,9 @@ extern boolean Mem_Ipw_IsLengthValid(
         Mem_AddressType     address,
         Mem_LengthType      length);
 
-/* [SWS_Mem_00035]: used by Mem.c's Mem_CheckEraseAlignment() to synchronously reject Mem_Erase() requests
- * that do not exactly match one physical sector, BEFORE the job is accepted (per [SWS_Mem_00059]) - i.e.
- * before it is queued for the deferred hardware trigger performed in Mem_MainFunction(). */
+/* [SWS_Mem_00035]: Mem.c dùng trong Mem_CheckEraseAlignment() để từ chối đồng bộ Mem_Erase() không khớp
+ * chính xác một sector vật lý TRƯỚC KHI job được chấp nhận theo [SWS_Mem_00059], tức trước khi nó được xếp
+ * hàng để Mem_MainFunction() kích hoạt phần cứng sau đó. */
 extern boolean Mem_Ipw_IsEraseAligned(
         Mem_InstanceIdType instanceId,
         Mem_AddressType     address,

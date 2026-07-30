@@ -1,8 +1,8 @@
 /**********************************************************************************************************************
  *  FILE:         Mem_Cfg.c
  *  MODULE:       Mem (Memory Driver) - Pre-Compile Configuration Data
- *  DESCRIPTION:  Runtime-accessible copy of the Mem driver's Published Information parameters
- *                [ECUC_Mem_00020], declared as extern const in Mem_Cfg.h.
+ *  MÔ TẢ:        Bản sao có thể truy cập khi runtime của tham số Published Information của Mem driver
+ *                [ECUC_Mem_00020], được khai báo extern const trong Mem_Cfg.h.
  *********************************************************************************************************************/
 
 #include "Mem_Cfg.h"

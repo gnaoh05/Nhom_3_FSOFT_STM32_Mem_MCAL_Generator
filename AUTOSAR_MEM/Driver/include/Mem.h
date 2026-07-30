@@ -1,38 +1,38 @@
 /**********************************************************************************************************************
  *  FILE:         Mem.h
  *  MODULE:       Mem (Memory Driver)
- *  DESCRIPTION:  Public API of the AUTOSAR Classic Platform Memory Driver, implemented according to
+ *  MÔ TẢ:        Public API của AUTOSAR Classic Platform Memory Driver, hiện thực theo
  *                AUTOSAR_CP_SWS_MemoryDriver, Document ID 1018, AUTOSAR CP R25-11.
  *
- *                Covers:
+ *                Bao gồm:
  *                  8.1 Imported Types
  *                  8.2 Type Definitions
  *                  8.3 Function Definitions (Synchronous / Asynchronous)
  *                  8.5 Scheduled Functions
  *
- *  TRACEABILITY: Requirement IDs (e.g. [SWS_Mem_xxxxx]) are quoted in comments throughout this file and
- *                Mem.c so that the implementation can be traced back to the specification.
+ *  TRACEABILITY: Mã Requirement (ví dụ [SWS_Mem_xxxxx]) được viện dẫn trong chú thích tại tệp này và
+ *                Mem.c để có thể trace hiện thực ngược về specification.
  *********************************************************************************************************************/
 
 #ifndef MEM_H
 #define MEM_H
 
 /*======================================================================================================================
- *  INCLUDES
+ *  INCLUDE
  *====================================================================================================================*/
-#include "Std_Types.h"              /* Std_ReturnType, Std_VersionInfoType, NULL_PTR, TRUE/FALSE  */
-#include "Mem_Cfg.h"                /* Pre-compile configuration (chapter 10)                      */
+#include "Std_Types.h"              /* Std_ReturnType, Std_VersionInfoType, NULL_PTR, TRUE/FALSE */
+#include "Mem_Cfg.h"                /* cấu hình pre-compile (chapter 10)                         */
 
 /*======================================================================================================================
- *  TYPES NORMALLY IMPORTED FROM MemAcc  [SWS_Mem_10020]
- *  This project does not use a separate Memory Access Module (MemAcc), so the two types that
- *  AUTOSAR_CP_SWS_MemoryDriver expects to import from MemAcc_GeneralTypes.h are defined directly here
- *  instead. If a MemAcc module is introduced later, replace this block with
- *  "#include MemAcc_GeneralTypes.h" and remove these definitions to avoid duplicate types.
+ *  TYPE THƯỜNG ĐƯỢC IMPORT TỪ MemAcc  [SWS_Mem_10020]
+ *  Dự án này không dùng Memory Access Module (MemAcc) riêng, nên hai type mà
+ *  AUTOSAR_CP_SWS_MemoryDriver yêu cầu import từ MemAcc_GeneralTypes.h được định nghĩa trực tiếp tại đây.
+ *  Nếu sau này có MemAcc, thay block này bằng "#include MemAcc_GeneralTypes.h" và xóa các định nghĩa để
+ *  tránh trùng type.
  *====================================================================================================================*/
 
-/* MemAcc_AddressType - physical address type. Width depends on whether 64-Bit addressing is required,
- * see [SRS_MemHwAb_14046] / [SWS_Mem_00036] / [SWS_Mem_00037]. STM32F401RE only needs 32-Bit addresses. */
+/* MemAcc_AddressType: type địa chỉ vật lý. Độ rộng phụ thuộc yêu cầu địa chỉ 64-Bit,
+ * xem [SRS_MemHwAb_14046] / [SWS_Mem_00036] / [SWS_Mem_00037]. STM32F401RE chỉ cần địa chỉ 32-Bit. */
 #ifndef MEMACC_ADDRESS_64BIT
 #define MEMACC_ADDRESS_64BIT STD_OFF
 #endif
@@ -43,22 +43,22 @@ typedef uint64 MemAcc_AddressType;
 typedef uint32 MemAcc_AddressType;
 #endif
 
-/* MemAcc_MemJobResultType - job result values as used by Mem_GetJobResult(), see chapter 7.2.1/7.2.1.1. */
+/* MemAcc_MemJobResultType: giá trị kết quả job dùng bởi Mem_GetJobResult(), xem chapter 7.2.1/7.2.1.1. */
 typedef enum
 {
-    MEM_JOB_OK = 0,             /* [SWS_Mem_00067] job completed successfully                                    */
-    MEM_JOB_PENDING,            /* [SWS_Mem_00030] job accepted, still being processed                           */
-    MEM_JOB_FAILED,             /* [SWS_Mem_00031] pending job was not able to complete                          */
-    MEM_INCONSISTENT,           /* [SWS_Mem_00076] job completed but result did not meet expectation (BlankCheck) */
-    MEM_ECC_CORRECTED,          /* [SWS_Mem_00077] job completed, correctable ECC error encountered              */
-    MEM_ECC_UNCORRECTED         /* [SWS_Mem_00063][SWS_Mem_00078][SWS_Mem_00061] uncorrectable ECC error         */
+    MEM_JOB_OK = 0,             /* [SWS_Mem_00067]: job hoàn tất thành công                                      */
+    MEM_JOB_PENDING,            /* [SWS_Mem_00030]: job đã chấp nhận, đang xử lý                                  */
+    MEM_JOB_FAILED,             /* [SWS_Mem_00031]: pending job không thể hoàn tất                                */
+    MEM_INCONSISTENT,           /* [SWS_Mem_00076]: job hoàn tất nhưng kết quả không như kỳ vọng (BlankCheck)     */
+    MEM_ECC_CORRECTED,          /* [SWS_Mem_00077]: job hoàn tất, gặp lỗi ECC có thể sửa                          */
+    MEM_ECC_UNCORRECTED         /* [SWS_Mem_00063][SWS_Mem_00078][SWS_Mem_00061]: lỗi ECC không thể sửa          */
 } MemAcc_MemJobResultType;
 
 /*======================================================================================================================
- *  MODULE / VENDOR IDENTIFICATION  [SWS_Mem_00074] / SWS_BSW_00101..00103, SWS_BSW_00171
+ *  NHẬN DẠNG MODULE / VENDOR  [SWS_Mem_00074] / SWS_BSW_00101..00103, SWS_BSW_00171
  *====================================================================================================================*/
-#define MEM_MODULE_ID                       255u   /* example / vendor specific */
-#define MEM_VENDOR_ID                       1u     /* example / vendor specific */
+#define MEM_MODULE_ID                       255u   /* ví dụ / phụ thuộc vendor */
+#define MEM_VENDOR_ID                       1u     /* ví dụ / phụ thuộc vendor */
 
 #define MEM_AR_RELEASE_MAJOR_VERSION         25u
 #define MEM_AR_RELEASE_MINOR_VERSION         11u
@@ -69,7 +69,7 @@ typedef enum
 #define MEM_SW_PATCH_VERSION                  0u
 
 /*======================================================================================================================
- *  SERVICE IDs  (Service ID [hex] column of each API definition in chapter 8.3/8.5)
+ *  SERVICE ID  (cột Service ID [hex] của từng API tại chapter 8.3/8.5)
  *====================================================================================================================*/
 #define MEM_SID_INIT                        0x01u  /* Mem_Init               [SWS_Mem_10008] */
 #define MEM_SID_GET_VERSION_INFO            0x02u  /* Mem_GetVersionInfo     [SWS_Mem_10009] */
@@ -86,109 +86,109 @@ typedef enum
 #define MEM_SID_RESUME                      0x0Du  /* Mem_Resume             [SWS_Mem_10025] */
 
 /*======================================================================================================================
- *  DEVELOPMENT ERROR CODES  [SWS_Mem_00052]
+ *  MÃ DEVELOPMENT ERROR  [SWS_Mem_00052]
  *====================================================================================================================*/
-#define MEM_E_UNINIT                        0x01u  /* API service called without module initialization      */
-#define MEM_E_PARAM_POINTER                 0x02u  /* API service called with NULL pointer                  */
-#define MEM_E_PARAM_ADDRESS                 0x03u  /* API service called with an invalid address            */
-#define MEM_E_PARAM_LENGTH                  0x04u  /* API service called with an invalid length             */
-#define MEM_E_PARAM_INSTANCE_ID             0x05u  /* API service called with an invalid driver instance ID */
-#define MEM_E_JOB_PENDING                   0x06u  /* API service called while a job request is pending     */
+#define MEM_E_UNINIT                        0x01u  /* gọi API khi module chưa được khởi tạo                  */
+#define MEM_E_PARAM_POINTER                 0x02u  /* gọi API với NULL pointer                              */
+#define MEM_E_PARAM_ADDRESS                 0x03u  /* gọi API với địa chỉ không hợp lệ                      */
+#define MEM_E_PARAM_LENGTH                  0x04u  /* gọi API với độ dài không hợp lệ                       */
+#define MEM_E_PARAM_INSTANCE_ID             0x05u  /* gọi API với driver instance ID không hợp lệ           */
+#define MEM_E_JOB_PENDING                   0x06u  /* gọi API khi đang có job request pending               */
 
 /*======================================================================================================================
- *  ADDITIONAL RETURN VALUE
- *  Used by several services to indicate that the underlying Mem driver service function is not
- *  implemented for the given memory device technology, see [SWS_Mem_00070].
+ *  GIÁ TRỊ TRẢ VỀ BỔ SUNG
+ *  Được một số dịch vụ dùng để báo rằng chức năng Mem driver bên dưới chưa được hiện thực cho công nghệ
+ *  bộ nhớ đang dùng, xem [SWS_Mem_00070].
  *====================================================================================================================*/
 #ifndef E_MEM_SERVICE_NOT_AVAIL
 #define E_MEM_SERVICE_NOT_AVAIL             ((Std_ReturnType)2U)
 #endif
 
 /*======================================================================================================================
- *  8.2  TYPE DEFINITIONS
+ *  8.2  ĐỊNH NGHĨA TYPE
  *====================================================================================================================*/
 
-/* [SWS_Mem_10002] Mem_AddressType - physical memory device address type, derived from MemAcc_AddressType */
+/* [SWS_Mem_10002] Mem_AddressType: type địa chỉ thiết bị bộ nhớ vật lý, suy ra từ MemAcc_AddressType */
 typedef MemAcc_AddressType Mem_AddressType;
 
-/* [SWS_Mem_10000] Mem_ConfigType - postbuild configuration structure type.
- * NOTE: per [SWS_Mem_00087] the configPtr argument passed to Mem_Init() is currently not used and shall
- * be a NULL pointer; the type is nevertheless declared to fulfill SRS_BSW_00414. */
+/* [SWS_Mem_10000] Mem_ConfigType: type cấu trúc cấu hình postbuild.
+ * Theo [SWS_Mem_00087], configPtr truyền vào Mem_Init() hiện chưa dùng và phải là NULL pointer; type vẫn
+ * được khai báo để đáp ứng SRS_BSW_00414. */
 typedef struct
 {
-    uint8 Mem_ConfigType_Reserved; /* not used - kept only for interface completeness */
+    uint8 Mem_ConfigType_Reserved; /* không dùng, chỉ giữ để đủ interface */
 } Mem_ConfigType;
 
-/* [SWS_Mem_10003] Mem_DataType - read/write data user buffer type */
+/* [SWS_Mem_10003] Mem_DataType: type dữ liệu cho user buffer read/write */
 typedef uint8 Mem_DataType;
 
-/* [SWS_Mem_10004] Mem_InstanceIdType - Memory driver instance ID type */
+/* [SWS_Mem_10004] Mem_InstanceIdType: type Memory driver instance ID */
 typedef uint32 Mem_InstanceIdType;
 
-/* [SWS_Mem_10007] Mem_LengthType - physical memory device length type */
+/* [SWS_Mem_10007] Mem_LengthType: type độ dài của thiết bị bộ nhớ vật lý */
 typedef uint32 Mem_LengthType;
 
-/* [SWS_Mem_10026] Mem_HwServiceIdType - Hardware specific service request identifier type */
+/* [SWS_Mem_10026] Mem_HwServiceIdType: type định danh yêu cầu hardware specific service */
 typedef uint32 Mem_HwServiceIdType;
 
 /*======================================================================================================================
- *  8.3.1  SYNCHRONOUS FUNCTIONS
+ *  8.3.1  HÀM ĐỒNG BỘ
  *====================================================================================================================*/
 
-/* [SWS_Mem_10008] Mem_Init - Initialization function */
+/* [SWS_Mem_10008] Mem_Init: hàm khởi tạo */
 extern void Mem_Init(const Mem_ConfigType* configPtr);
 
-/* [SWS_Mem_10018] Mem_DeInit - De-Initialization function */
+/* [SWS_Mem_10018] Mem_DeInit: hàm hủy khởi tạo */
 extern void Mem_DeInit(void);
 
 #if (MEM_VERSION_INFO_API == STD_ON)
-/* [SWS_Mem_10009] Mem_GetVersionInfo - returns version information of the Mem module */
+/* [SWS_Mem_10009] Mem_GetVersionInfo: trả về thông tin phiên bản module Mem */
 extern void Mem_GetVersionInfo(Std_VersionInfoType* versionInfoPtr);
 #endif
 
-/* [SWS_Mem_10011] Mem_GetJobResult - returns result of the most recent job */
+/* [SWS_Mem_10011] Mem_GetJobResult: trả về kết quả job gần nhất */
 extern MemAcc_MemJobResultType Mem_GetJobResult(Mem_InstanceIdType instanceId);
 
-/* [SWS_Mem_10024] Mem_Suspend - suspend active memory operation using hardware mechanism */
+/* [SWS_Mem_10024] Mem_Suspend: tạm dừng thao tác bộ nhớ đang chạy bằng cơ chế phần cứng */
 extern Std_ReturnType Mem_Suspend(Mem_InstanceIdType instanceId);
 
-/* [SWS_Mem_10025] Mem_Resume - resume suspended memory operation using hardware mechanism */
+/* [SWS_Mem_10025] Mem_Resume: tiếp tục thao tác bộ nhớ đã tạm dừng bằng cơ chế phần cứng */
 extern Std_ReturnType Mem_Resume(Mem_InstanceIdType instanceId);
 
-/* [SWS_Mem_10015] Mem_PropagateError - report an access error (e.g. ECC) from the system ECC handler */
+/* [SWS_Mem_10015] Mem_PropagateError: báo lỗi truy cập (ví dụ ECC) từ system ECC handler */
 extern void Mem_PropagateError(Mem_InstanceIdType instanceId);
 
 /*======================================================================================================================
- *  8.3.2  ASYNCHRONOUS FUNCTIONS
+ *  8.3.2  HÀM BẤT ĐỒNG BỘ
  *====================================================================================================================*/
 
-/* [SWS_Mem_10012] Mem_Read - triggers a read job */
+/* [SWS_Mem_10012] Mem_Read: kích hoạt read job */
 extern Std_ReturnType Mem_Read(
         Mem_InstanceIdType instanceId,
         Mem_AddressType     sourceAddress,
         Mem_DataType*       destinationDataPtr,
         Mem_LengthType      length);
 
-/* [SWS_Mem_10013] Mem_Write - triggers a write job */
+/* [SWS_Mem_10013] Mem_Write: kích hoạt write job */
 extern Std_ReturnType Mem_Write(
         Mem_InstanceIdType   instanceId,
         Mem_AddressType      targetAddress,
         const Mem_DataType*  sourceDataPtr,
         Mem_LengthType       length);
 
-/* [SWS_Mem_10014] Mem_Erase - triggers an erase job */
+/* [SWS_Mem_10014] Mem_Erase: kích hoạt erase job */
 extern Std_ReturnType Mem_Erase(
         Mem_InstanceIdType instanceId,
         Mem_AddressType     targetAddress,
         Mem_LengthType      length);
 
-/* [SWS_Mem_10016] Mem_BlankCheck - triggers a job to check the erased state of a memory area */
+/* [SWS_Mem_10016] Mem_BlankCheck: kích hoạt job kiểm tra trạng thái đã xóa của vùng nhớ */
 extern Std_ReturnType Mem_BlankCheck(
         Mem_InstanceIdType instanceId,
         Mem_AddressType     targetAddress,
         Mem_LengthType      length);
 
-/* [SWS_Mem_10017] Mem_HwSpecificService - dispatches a hardware specific memory driver job */
+/* [SWS_Mem_10017] Mem_HwSpecificService: điều phối hardware specific memory driver job */
 extern Std_ReturnType Mem_HwSpecificService(
         Mem_InstanceIdType   instanceId,
         Mem_HwServiceIdType  hwServiceId,
@@ -196,10 +196,10 @@ extern Std_ReturnType Mem_HwSpecificService(
         Mem_LengthType*      lengthPtr);
 
 /*======================================================================================================================
- *  8.5  SCHEDULED FUNCTIONS
- *  [SWS_Mem_10010] Mem_MainFunction - handles the requested jobs and internal management operations.
- *  Available via SchM_Mem.h in a full RTE/SchM integration; declared here as well so the module is
- *  usable stand-alone. Must be called cyclically, see [SWS_Mem_00066]. No fixed cycle time is required.
+ *  8.5  HÀM ĐƯỢC LẬP LỊCH
+ *  [SWS_Mem_10010] Mem_MainFunction: xử lý job được yêu cầu và thao tác quản lý nội bộ.
+ *  Có thể truy cập qua SchM_Mem.h khi tích hợp đầy đủ RTE/SchM; cũng khai báo tại đây để module dùng độc lập.
+ *  Phải được gọi tuần hoàn, xem [SWS_Mem_00066]. Không yêu cầu chu kỳ cố định.
  *====================================================================================================================*/
 extern void Mem_MainFunction(void);
 

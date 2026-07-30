@@ -1,15 +1,15 @@
 /******************************************************************************
  * FILE: ELF_Erase_Test.c
- * DESCRIPTION: Erase-path tests for the AUTOSAR Mem driver
+ * MÔ TẢ: Test đường xóa cho AUTOSAR Mem driver
  ******************************************************************************/
 
 #include "ELF_Erase_Test.h"
 #include "TestManager.h"
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10014], [SWS_Mem_00066], [SWS_Mem_00067], [SWS_Mem_00088], p.15,24,38-39
- * - Verifies a valid sector erase request completes with MEM_JOB_OK; erased-state inspection is the
- *   upper-layer confirmation mechanism aligned with [SWS_Mem_00088].
+ * - Kiểm tra yêu cầu xóa sector hợp lệ hoàn tất với MEM_JOB_OK; kiểm tra trạng thái đã xóa là cơ chế xác nhận
+ *   của upper layer, phù hợp với [SWS_Mem_00088].
  */
 static void ELF_ERASE_001(void)
 {
@@ -58,9 +58,9 @@ static void ELF_ERASE_001(void)
                                 (passed == TRUE) ? 1u : 0u);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10014], [SWS_Mem_00016], [SWS_Mem_00035], p.24,39
- * - Verifies Mem_Erase() rejects a request that does not match physical sector boundaries.
+ * - Kiểm tra Mem_Erase() từ chối yêu cầu không khớp ranh giới sector vật lý.
  */
 static void ELF_ERASE_002(void)
 {
@@ -81,9 +81,9 @@ static void ELF_ERASE_002(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10014], [SWS_Mem_00016], p.39
- * - Verifies Mem_Erase() rejects an address outside the configured flash range.
+ * - Kiểm tra Mem_Erase() từ chối địa chỉ ngoài vùng Flash đã cấu hình.
  */
 static void ELF_ERASE_003(void)
 {
@@ -105,9 +105,9 @@ static void ELF_ERASE_003(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10014], [SWS_Mem_00015], p.39
- * - Verifies Mem_Erase() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ * - Kiểm tra Mem_Erase() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
 static void ELF_ERASE_004(void)
 {
@@ -129,9 +129,9 @@ static void ELF_ERASE_004(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10014], [SWS_Mem_00017], p.39
- * - Verifies Mem_Erase() rejects an invalid length with MEM_E_PARAM_LENGTH.
+ * - Kiểm tra Mem_Erase() từ chối độ dài không hợp lệ với MEM_E_PARAM_LENGTH.
  */
 static void ELF_ERASE_005(void)
 {
@@ -153,9 +153,9 @@ static void ELF_ERASE_005(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10014], [SWS_Mem_00018], p.39
- * - Verifies Mem_Erase() rejects a request while another job is already pending.
+ * - Kiểm tra Mem_Erase() từ chối yêu cầu khi một job khác đang pending.
  */
 static void ELF_ERASE_006(void)
 {

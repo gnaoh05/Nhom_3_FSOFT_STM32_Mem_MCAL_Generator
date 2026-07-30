@@ -1,14 +1,14 @@
 /******************************************************************************
  * FILE: ELF_BlankCheck_Test.c
- * DESCRIPTION: Blank-check tests for the AUTOSAR Mem driver
+ * MÔ TẢ: Test blank-check cho AUTOSAR Mem driver
  ******************************************************************************/
 
 #include "ELF_BlankCheck_Test.h"
 #include "TestManager.h"
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10016], [SWS_Mem_00066], [SWS_Mem_00067], p.15,40-41
- * - Verifies BlankCheck on an erased sector completes successfully with MEM_JOB_OK.
+ * - Kiểm tra BlankCheck trên sector đã xóa hoàn tất thành công với MEM_JOB_OK.
  */
 static void ELF_BLANKCHECK_001(void)
 {
@@ -40,9 +40,9 @@ static void ELF_BLANKCHECK_001(void)
                                 (uint32)jobResult);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10016], [SWS_Mem_00076], p.16,40-41
- * - Verifies BlankCheck reports MEM_INCONSISTENT when the checked sector is not blank.
+ * - Kiểm tra BlankCheck báo MEM_INCONSISTENT khi sector được kiểm tra không blank.
  */
 static void ELF_BLANKCHECK_002(void)
 {
@@ -89,9 +89,9 @@ static void ELF_BLANKCHECK_002(void)
                                 (uint32)jobResult);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10016], [SWS_Mem_00022], p.40
- * - Verifies Mem_BlankCheck() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ * - Kiểm tra Mem_BlankCheck() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
 static void ELF_BLANKCHECK_003(void)
 {
@@ -113,9 +113,9 @@ static void ELF_BLANKCHECK_003(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10016], [SWS_Mem_00023], p.40
- * - Verifies Mem_BlankCheck() rejects an invalid address with MEM_E_PARAM_ADDRESS.
+ * - Kiểm tra Mem_BlankCheck() từ chối địa chỉ không hợp lệ với MEM_E_PARAM_ADDRESS.
  */
 static void ELF_BLANKCHECK_004(void)
 {
@@ -137,9 +137,9 @@ static void ELF_BLANKCHECK_004(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10016], [SWS_Mem_00024], p.40
- * - Verifies Mem_BlankCheck() rejects an invalid length with MEM_E_PARAM_LENGTH.
+ * - Kiểm tra Mem_BlankCheck() từ chối độ dài không hợp lệ với MEM_E_PARAM_LENGTH.
  */
 static void ELF_BLANKCHECK_005(void)
 {
@@ -161,9 +161,9 @@ static void ELF_BLANKCHECK_005(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10016], [SWS_Mem_00025], p.40-41
- * - Verifies Mem_BlankCheck() rejects a request while another job is already pending.
+ * - Kiểm tra Mem_BlankCheck() từ chối yêu cầu khi một job khác đang pending.
  */
 static void ELF_BLANKCHECK_006(void)
 {

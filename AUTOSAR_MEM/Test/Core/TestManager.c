@@ -1,6 +1,6 @@
 /******************************************************************************
  * FILE: TestManager.c
- * DESCRIPTION: AUTOSAR MEM Driver register-level test framework for STM32F401
+ * MÔ TẢ: Khung kiểm thử AUTOSAR MEM Driver mức thanh ghi cho STM32F401
  ******************************************************************************/
 
 #include "TestManager.h"
@@ -14,8 +14,7 @@
 #include "ELF_BlankCheck_Test.h"
 #include "ELF_Job_Test.h"
 
-#include "stm32f401xe.h"
-#include "system_stm32f4xx.h"
+#include "Stm32F401_BareMetal.h"
 
 #define TEST_REPORT_SIGNATURE    0x54455354UL
 #define TEST_INVALID_INDEX       0xFFFFFFFFUL
@@ -84,29 +83,29 @@ static void TestManager_Delay(volatile uint32 cycles)
 
 static void TestManager_LedInit(void)
 {
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
+    STM32_RCC->AHB1ENR |= STM32_RCC_AHB1ENR_GPIOAEN;
 
-    GPIOA->MODER &= ~(0x3UL << (5u * 2u));
-    GPIOA->MODER |=  (0x1UL << (5u * 2u));
-    GPIOA->OTYPER &= ~TEST_LED_PIN_MASK;
-    GPIOA->OSPEEDR |= (0x3UL << (5u * 2u));
-    GPIOA->PUPDR &= ~(0x3UL << (5u * 2u));
+    STM32_GPIOA->MODER &= ~(0x3UL << (5u * 2u));
+    STM32_GPIOA->MODER |=  (0x1UL << (5u * 2u));
+    STM32_GPIOA->OTYPER &= ~TEST_LED_PIN_MASK;
+    STM32_GPIOA->OSPEEDR |= (0x3UL << (5u * 2u));
+    STM32_GPIOA->PUPDR &= ~(0x3UL << (5u * 2u));
 }
 
 static void TestManager_LedOn(void)
 {
-    GPIOA->BSRR = TEST_LED_PIN_MASK;
+    STM32_GPIOA->BSRR = TEST_LED_PIN_MASK;
 }
 
 static void TestManager_LedOff(void)
 {
-    GPIOA->BSRR = (TEST_LED_PIN_MASK << 16u);
+    STM32_GPIOA->BSRR = (TEST_LED_PIN_MASK << 16u);
 }
 
 #if !((TEST_ENABLE_UART_MENU == STD_ON) && (TEST_ENABLE_UART_OUTPUT == STD_ON))
 static void TestManager_LedToggle(void)
 {
-    if ((GPIOA->ODR & TEST_LED_PIN_MASK) != 0u)
+    if ((STM32_GPIOA->ODR & TEST_LED_PIN_MASK) != 0u)
     {
         TestManager_LedOff();
     }
@@ -121,30 +120,30 @@ static void TestManager_UartInit(void)
 {
     uint32 uartDivider;
 
-    RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
-    RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
+    STM32_RCC->AHB1ENR |= STM32_RCC_AHB1ENR_GPIOAEN;
+    STM32_RCC->APB1ENR |= STM32_RCC_APB1ENR_USART2EN;
 
-    GPIOA->MODER &= ~((0x3UL << (2u * 2u)) | (0x3UL << (3u * 2u)));
-    GPIOA->MODER |=  ((0x2UL << (2u * 2u)) | (0x2UL << (3u * 2u)));
-    GPIOA->OTYPER &= ~((1UL << 2u) | (1UL << 3u));
-    GPIOA->OSPEEDR |= ((0x3UL << (2u * 2u)) | (0x3UL << (3u * 2u)));
-    GPIOA->PUPDR &= ~((0x3UL << (2u * 2u)) | (0x3UL << (3u * 2u)));
-    GPIOA->AFR[0] &= ~((0xFUL << (2u * 4u)) | (0xFUL << (3u * 4u)));
-    GPIOA->AFR[0] |=  ((0x7UL << (2u * 4u)) | (0x7UL << (3u * 4u)));
+    STM32_GPIOA->MODER &= ~((0x3UL << (2u * 2u)) | (0x3UL << (3u * 2u)));
+    STM32_GPIOA->MODER |=  ((0x2UL << (2u * 2u)) | (0x2UL << (3u * 2u)));
+    STM32_GPIOA->OTYPER &= ~((1UL << 2u) | (1UL << 3u));
+    STM32_GPIOA->OSPEEDR |= ((0x3UL << (2u * 2u)) | (0x3UL << (3u * 2u)));
+    STM32_GPIOA->PUPDR &= ~((0x3UL << (2u * 2u)) | (0x3UL << (3u * 2u)));
+    STM32_GPIOA->AFR[0] &= ~((0xFUL << (2u * 4u)) | (0xFUL << (3u * 4u)));
+    STM32_GPIOA->AFR[0] |=  ((0x7UL << (2u * 4u)) | (0x7UL << (3u * 4u)));
 
-    SystemCoreClockUpdate();
-    uartDivider = (SystemCoreClock + (TEST_UART_BAUDRATE / 2u)) / TEST_UART_BAUDRATE;
+    Stm32_BareMetalSystemCoreClockUpdate();
+    uartDivider = (Stm32_SystemCoreClock + (TEST_UART_BAUDRATE / 2u)) / TEST_UART_BAUDRATE;
 
     if (uartDivider == 0u)
     {
         uartDivider = 1u;
     }
 
-    USART2->CR1 = 0u;
-    USART2->BRR = uartDivider;
-    USART2->CR2 = 0u;
-    USART2->CR3 = 0u;
-    USART2->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+    STM32_USART2->CR1 = 0u;
+    STM32_USART2->BRR = uartDivider;
+    STM32_USART2->CR2 = 0u;
+    STM32_USART2->CR3 = 0u;
+    STM32_USART2->CR1 = STM32_USART_CR1_TE | STM32_USART_CR1_RE | STM32_USART_CR1_UE;
 
     TestManager_UartReady = TRUE;
 }
@@ -166,11 +165,11 @@ static void TestManager_UartWriteChar(char ch)
 #if (TEST_ENABLE_UART_OUTPUT == STD_ON)
     if (TestManager_UartReady == TRUE)
     {
-        while ((USART2->SR & USART_SR_TXE) == 0u)
+        while ((STM32_USART2->SR & STM32_USART_SR_TXE) == 0u)
         {
         }
 
-        USART2->DR = (uint8)ch;
+        STM32_USART2->DR = (uint8)ch;
     }
 #else
     (void)ch;
@@ -253,9 +252,9 @@ static boolean TestManager_UartTryReadChar(char* ch)
 #if (TEST_ENABLE_UART_OUTPUT == STD_ON)
     if ((ch != NULL_PTR) &&
         (TestManager_UartReady == TRUE) &&
-        ((USART2->SR & USART_SR_RXNE) != 0u))
+        ((STM32_USART2->SR & STM32_USART_SR_RXNE) != 0u))
     {
-        *ch = (char)(USART2->DR & 0xFFu);
+        *ch = (char)(STM32_USART2->DR & 0xFFu);
         available = TRUE;
     }
 #else

@@ -1,14 +1,14 @@
 /******************************************************************************
  * FILE: ELF_Status_Test.c
- * DESCRIPTION: Job-status tests for the AUTOSAR Mem driver
+ * MÔ TẢ: Test trạng thái job cho AUTOSAR Mem driver
  ******************************************************************************/
 
 #include "ELF_Status_Test.h"
 #include "TestManager.h"
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10011], [SWS_Mem_00029], [SWS_Mem_00001], p.15,30,32
- * - Verifies Mem_GetJobResult() reports MEM_JOB_OK after driver initialization.
+ * - Kiểm tra Mem_GetJobResult() báo MEM_JOB_OK sau khi driver khởi tạo.
  */
 static void ELF_STATUS_001(void)
 {
@@ -25,9 +25,9 @@ static void ELF_STATUS_001(void)
                                 (uint32)jobResult);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00030], [SWS_Mem_00029], p.15,36
- * - Verifies an accepted asynchronous read request changes the job result to MEM_JOB_PENDING.
+ * - Kiểm tra yêu cầu đọc bất đồng bộ được chấp nhận đổi kết quả job thành MEM_JOB_PENDING.
  */
 static void ELF_STATUS_002(void)
 {
@@ -49,9 +49,9 @@ static void ELF_STATUS_002(void)
                                 (uint32)jobResult);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00066], [SWS_Mem_00067], p.15,36
- * - Verifies Mem_MainFunction() completes an accepted read request and reports MEM_JOB_OK.
+ * - Kiểm tra Mem_MainFunction() hoàn tất yêu cầu đọc đã chấp nhận và báo MEM_JOB_OK.
  */
 static void ELF_STATUS_003(void)
 {
@@ -71,9 +71,9 @@ static void ELF_STATUS_003(void)
                                 (uint32)jobResult);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10011], [SWS_Mem_00090], p.32
- * - Verifies Mem_GetJobResult() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ * - Kiểm tra Mem_GetJobResult() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
 static void ELF_STATUS_004(void)
 {
@@ -95,9 +95,9 @@ static void ELF_STATUS_004(void)
                                 (uint32)jobResult);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_00059], [SWS_Mem_00072], [SWS_Mem_00029], [SWS_Mem_10012], p.15,32,36
- * - Verifies a synchronously rejected request returns E_NOT_OK and does not move the stored job result away from MEM_JOB_OK.
+ * - Kiểm tra yêu cầu bị từ chối đồng bộ trả E_NOT_OK và không đổi kết quả job đã lưu khỏi MEM_JOB_OK.
  */
 static void ELF_STATUS_005(void)
 {

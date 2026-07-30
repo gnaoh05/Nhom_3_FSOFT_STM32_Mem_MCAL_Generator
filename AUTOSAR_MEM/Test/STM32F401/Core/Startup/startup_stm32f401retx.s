@@ -43,7 +43,7 @@ defined in linker script */
 .word  _sbss
 /* end address for the .bss section. defined in linker script */
 .word  _ebss
-/* stack used for SystemInit_ExtMemCtl; always internal RAM used */
+/* stack luôn dùng RAM nội */
 
 /**
  * @brief  This is the code that gets called when the processor first
@@ -60,8 +60,8 @@ defined in linker script */
 Reset_Handler:  
   ldr   sp, =_estack    		 /* set stack pointer */
 
-/* Call the clock system initialization function.*/
-  bl  SystemInit  
+/* Khởi tạo hệ thống bare-metal trước khi khởi tạo dữ liệu C. */
+  bl  Stm32_BareMetalSystemInit
 
 /* Copy the data segment initializers from flash to SRAM */  
   ldr r0, =_sdata
@@ -115,7 +115,7 @@ Infinite_Loop:
   .size  Default_Handler, .-Default_Handler
 /******************************************************************************
 *
-* The minimal vector table for a Cortex M3. Note that the proper constructs
+* The minimal vector table for a Cortex-M4. Note that the proper constructs
 * must be placed on this to ensure that it ends up at physical address
 * 0x0000.0000.
 * 

@@ -1,6 +1,6 @@
 /******************************************************************************
  * FILE: TestManager.h
- * DESCRIPTION: AUTOSAR MEM Driver Test Manager and register-level test support
+ * MÔ TẢ: Test Manager AUTOSAR MEM Driver và hỗ trợ kiểm thử mức thanh ghi
  ******************************************************************************/
 
 #ifndef TESTMANAGER_H
@@ -15,7 +15,7 @@ extern "C" {
 #include "Flash_IP_Cfg.h"
 
 /*===========================================================================*/
-/* Test Group                                                                */
+/* Nhóm test                                                                 */
 /*===========================================================================*/
 
 typedef enum
@@ -36,7 +36,7 @@ typedef enum
 } TestGroupType;
 
 /*===========================================================================*/
-/* Result / Fault Report                                                     */
+/* Báo cáo kết quả / fault                                                   */
 /*===========================================================================*/
 
 typedef enum
@@ -100,12 +100,12 @@ extern volatile TestReportType g_TestReport;
 /* Select Active Test                                                        */
 /*===========================================================================*/
 
-/* Chinh macro nay de chay 1 nhom test cu the hoac TEST_ALL_GROUPS.
- * Macro nay chi duoc su dung khi TEST_ENABLE_UART_MENU == STD_OFF. */
+/* Chỉnh macro này để chạy một nhóm test cụ thể hoặc TEST_ALL_GROUPS.
+ * Macro này chỉ được dùng khi TEST_ENABLE_UART_MENU == STD_OFF. */
 #define ACTIVE_TEST_GROUP             TEST_ALL_GROUPS
 
 /*===========================================================================*/
-/* Hardware-oriented test configuration                                      */
+/* Cấu hình test hướng phần cứng                                             */
 /*===========================================================================*/
 
 #define TEST_ENABLE_UART_OUTPUT       STD_ON
@@ -113,8 +113,8 @@ extern volatile TestReportType g_TestReport;
 #define TEST_ENABLE_UART_MENU         STD_ON
 #define TEST_UART_BAUDRATE            115200u
 
-/* Reserve one full flash sector for destructive tests (write/erase/blank-check).
- * Default: sector 7 on STM32F401RE (0x08060000 - 0x0807FFFF). */
+/* Dành riêng một Flash sector đầy đủ cho test phá hủy dữ liệu (write/erase/blank-check).
+ * Mặc định: sector 7 trên STM32F401RE (0x08060000 - 0x0807FFFF). */
 #define TEST_FLASH_INSTANCE           MemConf_MemInstance_MemInstance_0
 #define TEST_FLASH_INVALID_INSTANCE   ((Mem_InstanceIdType)MEM_INSTANCE_COUNT)
 #define TEST_FLASH_SECTOR_ADDRESS     ((Mem_AddressType)0x08060000UL)
@@ -123,7 +123,7 @@ extern volatile TestReportType g_TestReport;
 #define TEST_FLASH_COMPARE_LENGTH     ((Mem_LengthType)16u)
 #define TEST_FLASH_INVALID_ADDRESS    ((Mem_AddressType)(FLASH_IP_BASE_ADDRESS + FLASH_IP_TOTAL_SIZE))
 
-/* Mem_MainFunction polling budget for accepted asynchronous jobs. */
+/* Số lần polling Mem_MainFunction tối đa cho job bất đồng bộ đã được chấp nhận. */
 #define TEST_MAINFUNCTION_TIMEOUT     8u
 
 /*===========================================================================*/

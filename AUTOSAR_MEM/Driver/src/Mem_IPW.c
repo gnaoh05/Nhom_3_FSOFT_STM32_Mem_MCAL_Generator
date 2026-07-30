@@ -1,61 +1,58 @@
 /**********************************************************************************************************************
  *  FILE:         Mem_IPW.c
  *  MODULE:       Mem_IPW (Memory Driver - IP Wrapper Layer)
- *  DESCRIPTION:  Implementation of the IP-Wrapper layer for the STM32F401RE. Delegates every hardware
- *                operation to Flash_IP (Flash_IP.h/.c), the bare-metal register-level driver for the
- *                internal Flash memory. This keeps Mem.c fully hardware-agnostic per [SWS_Mem_00035], and
- *                confines all STM32F401RE specifics (registers, sector geometry, IRQ handling) to Flash_IP.
+ *  MÔ TẢ:        Hiện thực lớp IP Wrapper cho STM32F401RE. Mọi thao tác phần cứng được chuyển đến
+ *                Flash_IP (Flash_IP.h/.c), driver thanh ghi bare-metal của Flash nội. Cách này giúp Mem.c
+ *                không phụ thuộc phần cứng theo [SWS_Mem_00035] và gom chi tiết STM32F401RE (thanh ghi,
+ *                hình học sector, xử lý IRQ) vào Flash_IP.
  *
- *                Only Mem driver instance 0 exists (see Mem_Cfg.h - MEM_INSTANCE_COUNT == 1), mapped 1:1
- *                to the single internal Flash bank of the STM32F401RE.
+ *                Chỉ có Mem driver instance 0 (xem Mem_Cfg.h - MEM_INSTANCE_COUNT == 1), ánh xạ 1:1
+ *                tới Flash bank nội duy nhất của STM32F401RE.
  *
- *                Job result bookkeeping:
- *                Flash_IP only tracks the status of Program/Erase (the operations it runs asynchronously
- *                via interrupt). Read and BlankCheck complete synchronously within this layer (Flash is
- *                memory-mapped), so their result is computed immediately and stored locally rather than
- *                read back from Flash_IP_GetStatus(). Mem_Ipw_GetJobResult() picks the right source based
- *                on which kind of operation was triggered last.
+ *                Quản lý kết quả job:
+ *                Flash_IP chỉ theo dõi trạng thái Program/Erase (thao tác bất đồng bộ qua interrupt).
+ *                Read và BlankCheck hoàn tất đồng bộ tại lớp này vì Flash memory-mapped, nên kết quả được
+ *                tính và lưu cục bộ thay vì đọc từ Flash_IP_GetStatus(). Mem_Ipw_GetJobResult() chọn đúng
+ *                nguồn theo loại thao tác được kích hoạt gần nhất.
  *********************************************************************************************************************/
 
 #include "Mem_IPW.h"
 #include "Flash_IP.h"
 
 /*======================================================================================================================
- *  [SWS_Mem_00033] static configuration check / [SWS_Mem_00060] multi-instance note
- *  Flash_IP.c models exactly one physical device: the single internal Flash bank of the STM32F401RE (one
- *  FLASH_CR/FLASH_SR register set, one set of module-static state variables). [SWS_Mem_00060] requires
+ *  [SWS_Mem_00033] kiểm tra cấu hình tĩnh / [SWS_Mem_00060] ghi chú multi-instance
+ *  Flash_IP.c mô hình đúng một thiết bị vật lý: Flash bank nội duy nhất của STM32F401RE (một bộ thanh ghi
+ *  FLASH_CR/FLASH_SR, một bộ biến trạng thái tĩnh của module). [SWS_Mem_00060] yêu cầu
  *  the Mem driver to "support multiple instances of the same memory device" - that requirement is
- *  satisfiable only for EXTERNAL memory devices of which several identical physical chips can exist (e.g.
- *  two identical SPI Flash ICs), never for a single MCU's own internal Flash controller, which is a
- *  hardware singleton by construction. If MEM_INSTANCE_COUNT were silently left >1 while every instance
- *  is still backed by this same Flash_IP, both instances would alias the same physical memory and corrupt
- *  each other's jobs. Fail at compile time instead of at runtime. To genuinely add a second Mem driver
- *  instance, back it with a DIFFERENT Mem_IPW/xxx_IP pair (e.g. an external SPI Flash driver), not with a
- *  second copy of this one. */
+ *  Requirement này chỉ đáp ứng được với bộ nhớ EXTERNAL có nhiều chip vật lý giống nhau (ví dụ hai SPI Flash
+ *  IC giống nhau), không thể áp dụng cho Flash controller nội duy nhất của MCU. Nếu MEM_INSTANCE_COUNT > 1
+ *  nhưng mọi instance vẫn dùng cùng Flash_IP, chúng sẽ trỏ vào cùng bộ nhớ vật lý và làm hỏng job của nhau.
+ *  Vì vậy cần lỗi ở compile time thay vì runtime. Để thêm Mem driver instance thứ hai, hãy dùng cặp
+ *  Mem_IPW/xxx_IP KHÁC (ví dụ driver SPI Flash ngoài), không phải bản sao thứ hai của driver này. */
 #if (MEM_INSTANCE_COUNT > 1u)
 #error "Mem_IPW.c backs every Mem driver instance with the single STM32F401RE internal Flash bank (Flash_IP.c). MEM_INSTANCE_COUNT must be 1 - see the SWS_Mem_00060 note in Mem_IPW.c."
 #endif
 
 /*======================================================================================================================
- *  Local state
+ *  Trạng thái cục bộ
  *====================================================================================================================*/
 typedef enum
 {
     MEM_IPW_RESULT_SRC_NONE = 0,
-    MEM_IPW_RESULT_SRC_FLASH_IP,  /* result comes from Flash_IP_GetStatus() - Program / Erase (async)   */
-    MEM_IPW_RESULT_SRC_LOCAL      /* result already computed synchronously - Read / BlankCheck           */
+    MEM_IPW_RESULT_SRC_FLASH_IP,  /* kết quả từ Flash_IP_GetStatus() - Program / Erase (bất đồng bộ)     */
+    MEM_IPW_RESULT_SRC_LOCAL      /* kết quả đã tính đồng bộ - Read / BlankCheck                           */
 } Mem_Ipw_ResultSourceType;
 
 static Mem_Ipw_ResultSourceType Mem_Ipw_ResultSource[MEM_INSTANCE_COUNT];
 static MemAcc_MemJobResultType  Mem_Ipw_LocalResult[MEM_INSTANCE_COUNT];
 
 /*======================================================================================================================
- *  Local helpers
+ *  Hàm hỗ trợ cục bộ
  *====================================================================================================================*/
 
-/* This IPW currently supports exactly one instance (instanceId == 0, the internal Flash).
- * Kept as a function (rather than a macro) so it is easy to extend if additional Mem driver
- * instances (e.g. an external SPI Flash Mem_IPW/Flash_IP pair) are added later. */
+/* IPW này hiện chỉ hỗ trợ một instance (instanceId == 0, Flash nội).
+ * Dùng hàm thay vì macro để dễ mở rộng nếu sau này thêm Mem driver instance (ví dụ cặp
+ * Mem_IPW/Flash_IP cho SPI Flash ngoài). */
 static boolean Mem_Ipw_IsInstanceSupported(Mem_InstanceIdType instanceId)
 {
     return (boolean)(instanceId < (Mem_InstanceIdType)MEM_INSTANCE_COUNT);
@@ -100,7 +97,7 @@ static MemAcc_MemJobResultType Mem_Ipw_MapFlashIpStatus(Flash_IP_StatusType stat
 }
 
 /*======================================================================================================================
- *  Lifecycle
+ *  Vòng đời
  *====================================================================================================================*/
 
 void Mem_Ipw_Init(Mem_InstanceIdType instanceId)
@@ -125,7 +122,7 @@ void Mem_Ipw_DeInit(Mem_InstanceIdType instanceId)
 }
 
 /*======================================================================================================================
- *  Asynchronous memory operations
+ *  Thao tác bộ nhớ bất đồng bộ
  *====================================================================================================================*/
 
 Std_ReturnType Mem_Ipw_Read(
@@ -138,9 +135,8 @@ Std_ReturnType Mem_Ipw_Read(
 
     if (Mem_Ipw_IsInstanceSupported(instanceId) == TRUE)
     {
-        /* Flash is memory-mapped: the read completes synchronously. The result is nevertheless only
-         * consumed by Mem.c/Mem_MainFunction() on the following cycle, consistent with the asynchronous
-         * API contract of [SWS_Mem_10012]. */
+        /* Flash là memory-mapped nên thao tác đọc hoàn tất đồng bộ. Kết quả vẫn chỉ được Mem.c/
+         * Mem_MainFunction() sử dụng ở chu kỳ sau, phù hợp API bất đồng bộ [SWS_Mem_10012]. */
         retVal = Flash_IP_Read((uint32)sourceAddress, destinationDataPtr, (uint32)length);
 
         if (retVal == E_OK)
@@ -181,9 +177,9 @@ Std_ReturnType Mem_Ipw_Erase(
 {
     Std_ReturnType retVal = E_NOT_OK;
 
-    /* Alignment has already been validated synchronously by Mem.c (Mem_CheckEraseAlignment(), which calls
-     * Mem_Ipw_IsEraseAligned() below) before this trigger function is ever reached from Mem_MainFunction().
-     * The check is repeated here defensively (cheap, and protects any other caller of this IPW layer). */
+    /* Căn chỉnh đã được Mem.c kiểm tra đồng bộ bằng Mem_CheckEraseAlignment(), hàm này gọi
+     * Mem_Ipw_IsEraseAligned(), trước khi trigger này được gọi từ Mem_MainFunction(). Kiểm tra lặp lại ở đây
+     * để phòng vệ với chi phí thấp và bảo vệ các nơi gọi khác của lớp IPW. */
     if ((Mem_Ipw_IsInstanceSupported(instanceId) == TRUE) &&
         (Mem_Ipw_IsEraseAligned(instanceId, targetAddress, length) == TRUE))
     {
@@ -209,8 +205,8 @@ Std_ReturnType Mem_Ipw_BlankCheck(
 
     if (Mem_Ipw_IsInstanceSupported(instanceId) == TRUE)
     {
-        /* Flash is memory-mapped and there is no dedicated hardware blank-check on this MCU, so the
-         * check is performed synchronously by reading back and comparing against the erased value. */
+        /* Flash là memory-mapped và MCU này không có phần cứng blank-check chuyên dụng, nên kiểm tra
+         * được thực hiện đồng bộ bằng cách đọc lại và so sánh với giá trị đã xóa. */
         uint32  i;
         uint8   byte;
         boolean isBlank = TRUE;
@@ -241,9 +237,9 @@ Std_ReturnType Mem_Ipw_HwSpecificService(
         Mem_DataType*        dataPtr,
         Mem_LengthType*      lengthPtr)
 {
-    /* No hardware specific services (e.g. read protection level, option byte access, 96-bit unique ID
-     * read at 0x1FFF7A10) are implemented for this reference port, see [SWS_Mem_00070]. Add cases per
-     * hwServiceId in Flash_IP.c and dispatch to them here if needed. */
+    /* Reference port này chưa hiện thực hardware-specific service nào, ví dụ read protection level,
+     * option byte hay unique ID 96-bit tại 0x1FFF7A10; xem [SWS_Mem_00070]. Khi cần, hãy thêm trường hợp
+     * theo hwServiceId trong Flash_IP.c và điều phối tại đây. */
     (void)dataPtr;
     (void)lengthPtr;
 
@@ -257,8 +253,8 @@ Std_ReturnType Mem_Ipw_HwSpecificService(
 
 /*======================================================================================================================
  *  Suspend / Resume
- *  The STM32F401 (single Flash bank) has no hardware suspend/resume mechanism for program/erase
- *  operations (that capability exists only on dual-bank / newer STM32 families), see [SWS_Mem_00082].
+ *  STM32F401 (single Flash bank) không có cơ chế phần cứng suspend/resume cho thao tác program/erase.
+ *  Khả năng này chỉ có trên dòng STM32 dual-bank hoặc mới hơn; xem [SWS_Mem_00082].
  *====================================================================================================================*/
 
 Std_ReturnType Mem_Ipw_Suspend(Mem_InstanceIdType instanceId)
@@ -282,14 +278,14 @@ Std_ReturnType Mem_Ipw_Resume(Mem_InstanceIdType instanceId)
 }
 
 /*======================================================================================================================
- *  Scheduling / job result retrieval
+ *  Lập lịch / lấy kết quả job
  *====================================================================================================================*/
 
 void Mem_Ipw_MainFunction(Mem_InstanceIdType instanceId)
 {
     if (Mem_Ipw_IsInstanceSupported(instanceId) == TRUE)
     {
-        Flash_IP_MainFunction(); /* reserved - completion is interrupt driven, see Flash_IP.h */
+        Flash_IP_MainFunction(); /* để dành; hoàn tất do interrupt điều khiển, xem Flash_IP.h */
     }
 }
 
@@ -313,7 +309,7 @@ MemAcc_MemJobResultType Mem_Ipw_GetJobResult(Mem_InstanceIdType instanceId)
 }
 
 /*======================================================================================================================
- *  Address / length validation helpers
+ *  Hàm hỗ trợ kiểm tra địa chỉ / độ dài
  *====================================================================================================================*/
 
 boolean Mem_Ipw_IsAddressValid(Mem_InstanceIdType instanceId, Mem_AddressType address)
@@ -355,11 +351,10 @@ boolean Mem_Ipw_IsEraseAligned(
 
     if (Mem_Ipw_IsInstanceSupported(instanceId) == TRUE)
     {
-        /* The STM32F401RE Flash controller can only erase whole sectors, so a valid Mem_Erase() request
-         * must have an address/length pair that exactly matches one configured sector (see
-         * Flash_IP_Cfg.c). MemAcc would normally be responsible for splitting a larger logical erase
-         * request into per-sector calls per [SWS_Mem_00035]; since this project has no MemAcc, the
-         * caller of Mem_Erase() is responsible for issuing one exactly-sector-sized request per sector. */
+        /* Flash controller STM32F401RE chỉ xóa được cả sector. Vì vậy, Mem_Erase() hợp lệ phải có cặp
+         * địa chỉ/độ dài khớp chính xác một sector đã cấu hình (xem Flash_IP_Cfg.c). Theo [SWS_Mem_00035],
+         * MemAcc thường tách yêu cầu xóa logic lớn thành các yêu cầu theo sector. Dự án này không có MemAcc,
+         * do đó nơi gọi Mem_Erase() phải gửi một yêu cầu đúng kích thước cho từng sector. */
         uint8 sector = Flash_IP_GetSectorFromAddress((uint32)address);
 
         valid = (boolean)((sector != 0xFFu) &&

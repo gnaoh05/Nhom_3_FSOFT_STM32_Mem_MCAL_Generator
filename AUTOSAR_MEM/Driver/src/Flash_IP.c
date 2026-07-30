@@ -1,31 +1,26 @@
 /**********************************************************************************************************************
  *  FILE:         Flash_IP.c
  *  MODULE:       Flash_IP (STM32F401RE internal Flash - bare-metal IP driver)
- *  DESCRIPTION:  See Flash_IP.h for module description and important single-bank limitations.
+ *  MÔ TẢ:        Xem Flash_IP.h để biết mô tả module và giới hạn quan trọng của single Flash bank.
  *
  *                Register reference (RM0368 / PM0059):
  *                  FLASH_CR  : PG(0) SER(1) MER(2) SNB(6:3) PSIZE(9:8) STRT(16) EOPIE(24) ERRIE(25) LOCK(31)
  *                  FLASH_SR  : EOP(0) OPERR(1) WRPERR(4) PGAERR(5) PGPERR(6) PGSERR(7) BSY(16)
  *                  FLASH_KEYR: unlock sequence KEY1=0x45670123, KEY2=0xCDEF89AB
  *
- *  DEPENDENCY:   Requires the CMSIS device header for STM32F401 (e.g. "stm32f401xe.h", normally pulled in
- *                transitively via "stm32f4xx.h") for the FLASH peripheral struct/bit-mask macros and for
- *                NVIC_EnableIRQ()/FLASH_IRQn. This header ships with every STM32F4 CMSIS device pack, HAL
- *                or not, and is therefore assumed present even in a bare-metal (register-only) project.
+ *  PHỤ THUỘC:    Stm32F401_BareMetal.h cung cấp địa chỉ thanh ghi và bit-mask được xây dựng trực tiếp
+ *                từ RM0368. Module không phụ thuộc CMSIS, HAL hoặc LL.
  *********************************************************************************************************************/
 
 #include "Flash_IP.h"
-#include "stm32f401xe.h" /* CMSIS device header: FLASH_TypeDef, FLASH_CR_x / FLASH_SR_x bit masks, FLASH_IRQn */
+#include "Stm32F401_BareMetal.h"
 
-/* NOTE: On the real 32-bit Cortex-M4 target, sizeof(void*) == sizeof(uint32), so the (volatile uint8*)
- * casts of a uint32 address below are exact-width and generate no warning. They only warn under
- * -Wint-to-pointer-cast when this file is compiled on a 64-bit host (e.g. for a quick desktop syntax
- * check), which is not the deployment target. */
+/* GHI CHÚ: Trên Cortex-M4 32-bit thực tế, sizeof(void*) == sizeof(uint32), nên ép kiểu địa chỉ uint32 sang
+ * (volatile uint8*) bên dưới có đúng độ rộng và không sinh cảnh báo. Cảnh báo -Wint-to-pointer-cast chỉ có
+ * khi biên dịch tệp này trên máy chủ 64-bit để kiểm tra cú pháp; đó không phải target triển khai. */
 
 /*======================================================================================================================
- *  Fallback bit-mask / position definitions.
- *  Guarded by #ifndef so this file still compiles unmodified against slightly older/newer CMSIS device
- *  header revisions that may not define every _Pos/_Msk variant.
+ *  Định nghĩa bit-mask / vị trí cục bộ theo RM0368.
  *====================================================================================================================*/
 #ifndef FLASH_CR_PG
 #define FLASH_CR_PG            (1UL << 0)
@@ -102,12 +97,12 @@
 #define FLASH_IP_KEY1                0x45670123UL
 #define FLASH_IP_KEY2                0xCDEF89ABUL
 
-#define FLASH_IP_PSIZE_BYTE          0x0UL   /* PSIZE = 00: x8  parallelism (byte programming)  */
+#define FLASH_IP_PSIZE_BYTE          0x0UL   /* PSIZE = 00: song song x8 (lập trình theo byte) */
 
 /*======================================================================================================================
- *  Module state
- *  Sector geometry (Flash_IP_SectorType / Flash_IP_SectorTable[]) is defined in Flash_IP_Cfg.c and
- *  declared in Flash_IP_Cfg.h (included transitively via Flash_IP.h).
+ *  Trạng thái module
+ *  Hình học sector (Flash_IP_SectorType / Flash_IP_SectorTable[]) được định nghĩa tại Flash_IP_Cfg.c và
+ *  khai báo tại Flash_IP_Cfg.h (được include gián tiếp qua Flash_IP.h).
  *====================================================================================================================*/
 typedef enum
 {
@@ -119,79 +114,78 @@ typedef enum
 static volatile Flash_IP_StatusType    Flash_IP_Status    = FLASH_IP_IDLE;
 static volatile Flash_IP_OperationType Flash_IP_CurrentOp = FLASH_IP_OP_NONE;
 
-/* Program job progress - one byte is programmed per hardware operation / interrupt cycle.
- * Byte-wise programming (PSIZE = x8) is used so arbitrary, non-word-aligned addresses and lengths
- * (as may be requested by Mem_Write()) are supported without extra alignment/padding logic. */
+/* Tiến trình job program: một byte được lập trình trong mỗi chu kỳ thao tác phần cứng / interrupt.
+ * Lập trình theo byte (PSIZE = x8) hỗ trợ địa chỉ và độ dài bất kỳ, kể cả không căn word như Mem_Write()
+ * có thể yêu cầu, mà không cần logic căn chỉnh hoặc đệm bổ sung. */
 static const uint8* Flash_IP_ProgSrcPtr;
 static uint32        Flash_IP_ProgAddress;
 static uint32        Flash_IP_ProgRemaining;
 
 /*======================================================================================================================
- *  Local helpers
+ *  Hàm hỗ trợ cục bộ
  *====================================================================================================================*/
 static void Flash_IP_Unlock(void)
 {
-    if ((FLASH->CR & FLASH_CR_LOCK) != 0u)
+    if ((STM32_FLASH->CR & FLASH_CR_LOCK) != 0u)
     {
-        FLASH->KEYR = FLASH_IP_KEY1;
-        FLASH->KEYR = FLASH_IP_KEY2;
+        STM32_FLASH->KEYR = FLASH_IP_KEY1;
+        STM32_FLASH->KEYR = FLASH_IP_KEY2;
     }
 }
 
 static void Flash_IP_Lock(void)
 {
-    FLASH->CR |= FLASH_CR_LOCK;
+    STM32_FLASH->CR |= FLASH_CR_LOCK;
 }
 
 static void Flash_IP_ClearAllFlags(void)
 {
-    /* FLASH_SR error/EOP bits are rc_w1 (cleared by writing 1) */
-    FLASH->SR = FLASH_IP_SR_ALL_CLEAR_FLAGS;
+    /* Bit lỗi/EOP của FLASH_SR là rc_w1, được xóa bằng cách ghi 1 */
+    STM32_FLASH->SR = FLASH_IP_SR_ALL_CLEAR_FLAGS;
 }
 
-/* RM0368 3.5.5 notes that erase can leave stale entries in the flash I/D caches. Reset the caches only
- * after temporarily disabling them, then restore the previous enable state. */
+/* RM0368 3.5.5 nêu rằng erase có thể để lại dữ liệu cũ trong I/D cache của Flash. Chỉ reset cache sau khi
+ * tạm thời tắt chúng, rồi khôi phục trạng thái enable trước đó. */
 static void Flash_IP_RefreshCachesAfterErase(void)
 {
-    uint32 cacheEnableMask = FLASH->ACR & (FLASH_ACR_ICEN | FLASH_ACR_DCEN);
+    uint32 cacheEnableMask = STM32_FLASH->ACR & (FLASH_ACR_ICEN | FLASH_ACR_DCEN);
 
-    FLASH->ACR &= ~(FLASH_ACR_ICEN | FLASH_ACR_DCEN);
-    FLASH->ACR |= FLASH_ACR_ICRST | FLASH_ACR_DCRST;
-    FLASH->ACR &= ~(FLASH_ACR_ICRST | FLASH_ACR_DCRST);
-    FLASH->ACR |= cacheEnableMask;
+    STM32_FLASH->ACR &= ~(FLASH_ACR_ICEN | FLASH_ACR_DCEN);
+    STM32_FLASH->ACR |= FLASH_ACR_ICRST | FLASH_ACR_DCRST;
+    STM32_FLASH->ACR &= ~(FLASH_ACR_ICRST | FLASH_ACR_DCRST);
+    STM32_FLASH->ACR |= cacheEnableMask;
 }
 
-/* Triggers programming of exactly one byte at Flash_IP_ProgAddress from *Flash_IP_ProgSrcPtr.
- * Completion (success or error) is reported later by FLASH_IRQHandler(). */
+/* Kích hoạt lập trình đúng một byte tại Flash_IP_ProgAddress từ *Flash_IP_ProgSrcPtr.
+ * Kết quả thành công hoặc lỗi sẽ được FLASH_IRQHandler() báo sau đó. */
 static void Flash_IP_TriggerNextByte(void)
 {
-    FLASH->CR &= ~FLASH_CR_PSIZE;
-    FLASH->CR |= (FLASH_IP_PSIZE_BYTE << FLASH_CR_PSIZE_Pos);
-    FLASH->CR |= FLASH_CR_PG | FLASH_CR_EOPIE | FLASH_CR_ERRIE;
+    STM32_FLASH->CR &= ~FLASH_CR_PSIZE;
+    STM32_FLASH->CR |= (FLASH_IP_PSIZE_BYTE << FLASH_CR_PSIZE_Pos);
+    STM32_FLASH->CR |= FLASH_CR_PG | FLASH_CR_EOPIE | FLASH_CR_ERRIE;
 
     *(volatile uint8*)(Flash_IP_ProgAddress) = *Flash_IP_ProgSrcPtr;
 }
 
 /*======================================================================================================================
- *  Lifecycle
+ *  Vòng đời
  *====================================================================================================================*/
 void Flash_IP_Init(void)
 {
     Flash_IP_Status    = FLASH_IP_IDLE;
     Flash_IP_CurrentOp = FLASH_IP_OP_NONE;
 
-    Flash_IP_Lock(); /* ensure Flash starts locked */
+    Flash_IP_Lock(); /* bảo đảm Flash khởi động ở trạng thái khóa */
     Flash_IP_ClearAllFlags();
 
-    NVIC_EnableIRQ(FLASH_IRQn);
+    Stm32_BareMetalEnableIrq(STM32_FLASH_IRQ_NUMBER);
 }
 
 void Flash_IP_DeInit(void)
 {
-    /* Best-effort cancel: disable interrupt sources and lock the Flash. A hardware operation already
-     * in progress (BSY=1) cannot be aborted - the bus will stall as documented in Flash_IP.h until it
-     * completes on its own. */
-    FLASH->CR &= ~(FLASH_CR_PG | FLASH_CR_SER | FLASH_CR_EOPIE | FLASH_CR_ERRIE);
+    /* Hủy theo khả năng tốt nhất: tắt nguồn interrupt và khóa Flash. Thao tác phần cứng đã chạy (BSY=1)
+     * không thể bị hủy; bus sẽ stall như mô tả trong Flash_IP.h cho đến khi thao tác tự hoàn tất. */
+    STM32_FLASH->CR &= ~(FLASH_CR_PG | FLASH_CR_SER | FLASH_CR_EOPIE | FLASH_CR_ERRIE);
     Flash_IP_Lock();
 
     Flash_IP_Status    = FLASH_IP_IDLE;
@@ -199,7 +193,7 @@ void Flash_IP_DeInit(void)
 }
 
 /*======================================================================================================================
- *  Status
+ *  Trạng thái
  *====================================================================================================================*/
 Flash_IP_StatusType Flash_IP_GetStatus(void)
 {
@@ -207,7 +201,7 @@ Flash_IP_StatusType Flash_IP_GetStatus(void)
 }
 
 /*======================================================================================================================
- *  Read (synchronous - Flash is memory mapped)
+ *  Read (đồng bộ - Flash là memory-mapped)
  *====================================================================================================================*/
 Std_ReturnType Flash_IP_Read(uint32 address, uint8* data, uint32 length)
 {
@@ -222,7 +216,7 @@ Std_ReturnType Flash_IP_Read(uint32 address, uint8* data, uint32 length)
 }
 
 /*======================================================================================================================
- *  Program (asynchronous, byte-wise, interrupt driven)
+ *  Program (bất đồng bộ, theo byte, điều khiển bởi interrupt)
  *====================================================================================================================*/
 Std_ReturnType Flash_IP_ProgramStart(uint32 address, const uint8* data, uint32 length)
 {
@@ -247,7 +241,7 @@ Std_ReturnType Flash_IP_ProgramStart(uint32 address, const uint8* data, uint32 l
 }
 
 /*======================================================================================================================
- *  Erase one sector (asynchronous, interrupt driven)
+ *  Erase một sector (bất đồng bộ, điều khiển bởi interrupt)
  *====================================================================================================================*/
 Std_ReturnType Flash_IP_EraseSectorStart(uint8 sectorNumber)
 {
@@ -261,9 +255,10 @@ Std_ReturnType Flash_IP_EraseSectorStart(uint8 sectorNumber)
         Flash_IP_Unlock();
         Flash_IP_ClearAllFlags();
 
-        FLASH->CR &= ~FLASH_CR_SNB;
-        FLASH->CR |= ((uint32)sectorNumber << FLASH_CR_SNB_Pos) | FLASH_CR_SER | FLASH_CR_EOPIE | FLASH_CR_ERRIE;
-        FLASH->CR |= FLASH_CR_STRT;
+        STM32_FLASH->CR &= ~FLASH_CR_SNB;
+        STM32_FLASH->CR |= ((uint32)sectorNumber << FLASH_CR_SNB_Pos) |
+                           FLASH_CR_SER | FLASH_CR_EOPIE | FLASH_CR_ERRIE;
+        STM32_FLASH->CR |= FLASH_CR_STRT;
 
         retVal = E_OK;
     }
@@ -272,26 +267,26 @@ Std_ReturnType Flash_IP_EraseSectorStart(uint8 sectorNumber)
 }
 
 /*======================================================================================================================
- *  Scheduling - completion is interrupt driven, nothing to poll here today. Reserved for future
- *  timeout/watchdog supervision (e.g. detect a stuck BSY bit if the interrupt is ever lost/masked).
+ *  Lập lịch: hoàn tất do interrupt điều khiển, hiện chưa cần polling. Dành cho giám sát timeout/watchdog
+ *  trong tương lai, ví dụ phát hiện bit BSY bị kẹt nếu interrupt bị mất hoặc bị mask.
  *====================================================================================================================*/
 void Flash_IP_MainFunction(void)
 {
-    /* intentionally empty - see header comment */
+    /* Chủ ý để trống, xem chú thích trong header */
 }
 
 /*======================================================================================================================
- *  Sector geometry helpers
+ *  Hàm hỗ trợ hình học sector
  *====================================================================================================================*/
 uint8 Flash_IP_GetSectorFromAddress(uint32 address)
 {
     uint8 sector;
-    uint8 found = FLASH_IP_SECTOR_COUNT; /* used as "not found" sentinel, cast to 0xFF below */
+    uint8 found = FLASH_IP_SECTOR_COUNT; /* giá trị canh gác "không tìm thấy", ép thành 0xFF bên dưới */
 
     for (sector = 0u; sector < FLASH_IP_SECTOR_COUNT; sector++)
     {
         uint32 start = Flash_IP_SectorTable[sector].StartAddress;
-        uint32 end   = start + Flash_IP_SectorTable[sector].Size; /* exclusive */
+        uint32 end   = start + Flash_IP_SectorTable[sector].Size; /* không bao gồm địa chỉ kết thúc */
 
         if ((address >= start) && (address < end))
         {
@@ -328,19 +323,19 @@ uint32 Flash_IP_GetSectorSize(uint8 sectorNumber)
 }
 
 /*======================================================================================================================
- *  FLASH global interrupt handler
- *  Fires on EOP (successful completion) or on any of the error flags, as enabled via EOPIE/ERRIE in
- *  Flash_IP_TriggerNextByte()/Flash_IP_EraseSectorStart(). See Flash_IP.h for the single-bank stall
- *  behavior that determines exactly when this handler actually executes.
+ *  Trình xử lý FLASH global interrupt
+ *  Xảy ra khi EOP (hoàn tất thành công) hoặc bất kỳ bit lỗi nào được bật thông qua EOPIE/ERRIE trong
+ *  Flash_IP_TriggerNextByte()/Flash_IP_EraseSectorStart(). Xem Flash_IP.h về hành vi stall của single bank,
+ *  yếu tố quyết định thời điểm handler này thực sự được thực thi.
  *====================================================================================================================*/
 void FLASH_IRQHandler(void)
 {
-    uint32 sr = FLASH->SR;
+    uint32 sr = STM32_FLASH->SR;
 
     if ((sr & FLASH_IP_SR_ALL_ERROR_FLAGS) != 0u)
     {
         Flash_IP_ClearAllFlags();
-        FLASH->CR &= ~(FLASH_CR_PG | FLASH_CR_SER | FLASH_CR_EOPIE | FLASH_CR_ERRIE);
+        STM32_FLASH->CR &= ~(FLASH_CR_PG | FLASH_CR_SER | FLASH_CR_EOPIE | FLASH_CR_ERRIE);
         Flash_IP_Lock();
 
         Flash_IP_Status    = FLASH_IP_ERROR;
@@ -348,11 +343,11 @@ void FLASH_IRQHandler(void)
     }
     else if ((sr & FLASH_SR_EOP) != 0u)
     {
-        FLASH->SR = FLASH_SR_EOP; /* clear EOP (rc_w1) */
+        STM32_FLASH->SR = FLASH_SR_EOP; /* xóa EOP (rc_w1) */
 
         if (Flash_IP_CurrentOp == FLASH_IP_OP_PROGRAM)
         {
-            FLASH->CR &= ~(FLASH_CR_PG | FLASH_CR_EOPIE | FLASH_CR_ERRIE);
+            STM32_FLASH->CR &= ~(FLASH_CR_PG | FLASH_CR_EOPIE | FLASH_CR_ERRIE);
 
             Flash_IP_ProgSrcPtr++;
             Flash_IP_ProgAddress++;
@@ -366,13 +361,13 @@ void FLASH_IRQHandler(void)
             }
             else
             {
-                /* still BUSY - program next byte (re-unlock not needed, LOCK was not set) */
+                /* vẫn BUSY: lập trình byte tiếp theo, không cần mở khóa lại vì LOCK chưa được đặt */
                 Flash_IP_TriggerNextByte();
             }
         }
         else if (Flash_IP_CurrentOp == FLASH_IP_OP_ERASE)
         {
-            FLASH->CR &= ~(FLASH_CR_SER | FLASH_CR_SNB | FLASH_CR_EOPIE | FLASH_CR_ERRIE);
+            STM32_FLASH->CR &= ~(FLASH_CR_SER | FLASH_CR_SNB | FLASH_CR_EOPIE | FLASH_CR_ERRIE);
             Flash_IP_Lock();
             Flash_IP_RefreshCachesAfterErase();
 
@@ -381,11 +376,11 @@ void FLASH_IRQHandler(void)
         }
         else
         {
-            /* Spurious EOP with no operation tracked - clear and ignore. */
+            /* EOP giả khi không có thao tác được theo dõi: xóa và bỏ qua. */
         }
     }
     else
     {
-        /* Spurious interrupt (neither EOP nor error flag set) - nothing to do. */
+        /* Interrupt giả, không có EOP hoặc bit lỗi: không cần xử lý. */
     }
 }

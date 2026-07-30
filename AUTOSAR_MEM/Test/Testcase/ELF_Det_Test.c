@@ -1,14 +1,14 @@
 /******************************************************************************
  * FILE: ELF_Det_Test.c
- * DESCRIPTION: DET-oriented tests for the AUTOSAR Mem driver
+ * MÔ TẢ: Test DET cho AUTOSAR Mem driver
  ******************************************************************************/
 
 #include "ELF_Det_Test.h"
 #include "TestManager.h"
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: section 7.3.1, p.23; [SWS_Mem_00052], p.25
- * - Derived check that an API used before initialization is rejected with MEM_E_UNINIT.
+ * - Kiểm tra suy ra: API được gọi trước khởi tạo phải bị từ chối với MEM_E_UNINIT.
  */
 static void ELF_DET_001(void)
 {
@@ -29,9 +29,9 @@ static void ELF_DET_001(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00005], p.36
- * - Verifies Mem_Read() rejects a NULL destination buffer with MEM_E_PARAM_POINTER.
+ * - Kiểm tra Mem_Read() từ chối destination buffer NULL với MEM_E_PARAM_POINTER.
  */
 static void ELF_DET_002(void)
 {
@@ -50,9 +50,9 @@ static void ELF_DET_002(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00006], p.36
- * - Verifies Mem_Read() rejects an invalid address with MEM_E_PARAM_ADDRESS.
+ * - Kiểm tra Mem_Read() từ chối địa chỉ không hợp lệ với MEM_E_PARAM_ADDRESS.
  */
 static void ELF_DET_003(void)
 {
@@ -72,9 +72,9 @@ static void ELF_DET_003(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00072], p.36
- * - Verifies Mem_Read() rejects an invalid length with MEM_E_PARAM_LENGTH.
+ * - Kiểm tra Mem_Read() từ chối độ dài không hợp lệ với MEM_E_PARAM_LENGTH.
  */
 static void ELF_DET_004(void)
 {
@@ -98,9 +98,9 @@ static void ELF_DET_004(void)
                                 (uint32)retVal);
 }
 
-/* Traceability:
+/* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00004], p.36
- * - Verifies Mem_Read() rejects an invalid instance ID with MEM_E_PARAM_INSTANCE_ID.
+ * - Kiểm tra Mem_Read() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
 static void ELF_DET_005(void)
 {

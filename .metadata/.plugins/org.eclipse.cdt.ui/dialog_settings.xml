@@ -2,12 +2,15 @@
 <section name="Workbench">
 	<item key="LastUsedHeaderTemplate" value="Default C header template"/>
 	<item key="LastUsedSourceTemplate" value="Default C source template"/>
-	<item key="org.eclipse.cdt.utils.ui.controls.FileListControl" value="${workspace_loc:/${ProjName}/Test/STM32F401/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy}"/>
+	<item key="org.eclipse.cdt.utils.ui.controls.FileListControl" value="${workspace_loc:/${ProjName}/Test/Core}"/>
 	<section name="completion_proposal_size">
 	</section>
 	<section name="org.eclipse.cdt.ui.text.hover.CMacroExpansionExploration">
 	</section>
 	<section name="OptionalMessageDialog.hide.">
 		<item key="askReindex.detail" value="0"/>
+	</section>
+	<section name="CResourceRenameRefactoringInputPage">
+		<item key="updateReferences" value="true"/>
 	</section>
 </section>
