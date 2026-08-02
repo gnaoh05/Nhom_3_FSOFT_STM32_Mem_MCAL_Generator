@@ -6,11 +6,16 @@
 
 #include "Std_Types.h"
 
-/* Thong so vat ly cua Flash STM32F401RE */
-#define FLASH_IP_START_ADDRESS       ({{ MemStartAddress }}U)
-#define FLASH_IP_NUMBER_OF_SECTORS   ({{ MemNumberOfSectors }}U)
-#define FLASH_IP_ERASE_SECTOR_SIZE   ({{ MemEraseSectorSize }}U)
-#define FLASH_IP_WRITE_PAGE_SIZE     ({{ MemWritePageSize }}U)
-#define FLASH_IP_MIN_READ_SIZE       ({{ MemMinReadSize }}U)
+/* Total Sector Batches configured */
+#define FLASH_IP_SECTOR_BATCH_COUNT  ({{ config.MemSectorBatch | length }}U)
+
+{% for batch in config.MemSectorBatch %}
+/* Thong so vat ly cua Flash Sector Batch {{ loop.index0 }} ({{ batch.name }}) */
+#define FLASH_IP_BATCH_{{ loop.index0 }}_START_ADDRESS       ({{ batch.MemStartAddress }}U)
+#define FLASH_IP_BATCH_{{ loop.index0 }}_NUMBER_OF_SECTORS   ({{ batch.MemNumberOfSectors }}U)
+#define FLASH_IP_BATCH_{{ loop.index0 }}_ERASE_SECTOR_SIZE   ({{ batch.MemEraseSectorSize }}U)
+#define FLASH_IP_BATCH_{{ loop.index0 }}_WRITE_PAGE_SIZE     ({{ config.MemGeneral.MemWritePageSize }}U)
+#define FLASH_IP_BATCH_{{ loop.index0 }}_MIN_READ_SIZE       (1U)
+{% endfor %}
 
 #endif /* FLASH_IP_CFG_H */

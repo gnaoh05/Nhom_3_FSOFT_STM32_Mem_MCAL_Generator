@@ -6,19 +6,30 @@
 
 #include "Std_Types.h"
 
-/* Bat/Tat Development Error Detect */
-#define MEM_DEV_ERROR_DETECT    ({{ MemDevErrorDetect }})
-
-/* Dinh danh Instance cua Mem Driver */
-#define MEM_INSTANCE_ID         ({{ MemInstanceId }}U)
+/* MemGeneral Configuration */
+#define MEM_DEV_ERROR_DETECT    ({{ config.MemGeneral.MemDevErrorDetect }})
+#define MEM_INSTANCE_ID         ({{ config.MemInstance.MemInstanceId }}U)
+#define MEM_INVOCATION          MEM_INVOCATION_{{ config.MemGeneral.MemInvocation }}
+#define MEM_MAIN_FUNCTION_PERIOD ({{ config.MemGeneral.MemMainFunctionPeriod }})
 
 /* ========================================================================== */
-/* CAU HINH THONG SO VAT LY BO NHO FLASH (SECTOR BATCH)                       */
+/* MEM SECTOR BATCHES CONFIGURATION                                           */
 /* ========================================================================== */
-#define MEM_START_ADDRESS       ({{ MemStartAddress }}U)
-#define MEM_NUMBER_OF_SECTORS   ({{ MemNumberOfSectors }}U)
-#define MEM_ERASE_SECTOR_SIZE   ({{ MemEraseSectorSize }}U)
-#define MEM_WRITE_PAGE_SIZE     ({{ MemWritePageSize }}U)
-#define MEM_MIN_READ_SIZE       ({{ MemMinReadSize }}U)
+#define MEM_SECTOR_BATCH_COUNT  ({{ config.MemSectorBatch | length }}U)
+
+{% for batch in config.MemSectorBatch %}
+/* Sector Batch {{ loop.index0 }} ({{ batch.name }}) */
+#define MEM_BATCH_{{ loop.index0 }}_START_ADDRESS       ({{ batch.MemStartAddress }}U)
+#define MEM_BATCH_{{ loop.index0 }}_NUMBER_OF_SECTORS   ({{ batch.MemNumberOfSectors }}U)
+#define MEM_BATCH_{{ loop.index0 }}_ERASE_SECTOR_SIZE   ({{ batch.MemEraseSectorSize }}U)
+#define MEM_BATCH_{{ loop.index0 }}_WRITE_PAGE_SIZE     ({{ config.MemGeneral.MemWritePageSize }}U)
+#define MEM_BATCH_{{ loop.index0 }}_MIN_READ_SIZE       (1U)
+{% endfor %}
+
+/* API Configuration */
+#define MEM_READ_API        ({{ config.MemApiConfig.MemReadApi }})
+#define MEM_WRITE_API       ({{ config.MemApiConfig.MemWriteApi }})
+#define MEM_ERASE_API       ({{ config.MemApiConfig.MemEraseApi }})
+#define MEM_GET_STATUS_API  ({{ config.MemApiConfig.MemGetStatusApi }})
 
 #endif /* MEM_CFG_H */
