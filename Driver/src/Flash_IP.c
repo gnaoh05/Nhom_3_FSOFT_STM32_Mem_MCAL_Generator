@@ -1,4 +1,5 @@
 #include "Flash_IP.h"
+#include "Flash_IP_Cfg.h"
 
 #define FLASH_BASE_ADDR           (0x40023C00UL)
 
@@ -39,7 +40,7 @@ typedef struct
 #define FLASH_KEY1                (0x45670123UL)
 #define FLASH_KEY2                (0xCDEF89ABUL)
 
-static Flash_IP_DriverStateType Flash_IP_DriverState = FLASH_IP_UNINITIALIZED;
+static Flash_IP_StatusType Flash_IP_DriverState = FLASH_IP_UNINITIALIZED;
 
 void Flash_IP_Init(void) 
 {
@@ -154,9 +155,16 @@ Flash_IP_JobResultType Flash_IP_Write(uint32 address, const uint8 *sourcePtr, ui
     crReg |= FLASH_CR_PSIZE_X32 | FLASH_CR_PG;
     FLASH_REG->CR = crReg;
 
-    /* Ghi dữ liệu 32-bit Word đầu tiên trong chunk */
-    uint32 dataWord = *((const uint32*)(const void*)sourcePtr);
-    *(__IO_UINT32*)address = dataWord;
+    /* Ghi toàn bộ các Word 32-bit trong chunk */
+    uint32 wordCount = length / 4U;
+    const uint32 *srcWordPtr = (const uint32 *)(const void *)sourcePtr;
+    uint32 targetAddr = address;
+
+    for (uint32 i = 0U; i < wordCount; i++)
+    {
+        *(__IO_UINT32*)targetAddr = srcWordPtr[i];
+        targetAddr += 4U;
+    }
 
     return FLASH_IP_JOB_BUSY;
 }
