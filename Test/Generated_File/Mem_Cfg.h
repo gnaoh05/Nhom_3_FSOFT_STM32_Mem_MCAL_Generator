@@ -1,10 +1,8 @@
-/* ========================================================================== */
-/* AUTOSAR MEMORY DRIVER (MEM) CONFIGURATION                                  */
-/* ========================================================================== */
 #ifndef MEM_CFG_H
 #define MEM_CFG_H
 
 #include "Std_Types.h"
+<<<<<<< HEAD
 
 /* MemGeneral Configuration */
 #define MEM_DEV_ERROR_DETECT    (STD_ON)

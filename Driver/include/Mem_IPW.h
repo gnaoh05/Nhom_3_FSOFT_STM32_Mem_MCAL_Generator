@@ -8,6 +8,7 @@
 typedef enum {
     MEM_IPW_IDLE = 0U,
     MEM_IPW_BUSY = 1U
+    MEM_IPW_ERROR
 } Mem_Ipw_StatusType;
 
 /* ============================================================================
@@ -63,5 +64,4 @@ void Mem_IPW_Cancel(Mem_InstanceIdType InstanceId);
  * @brief Hàm chu kỳ ngầm của IPW (Xử lý Timeout hoặc cờ phần cứng nếu cần)
  */
 void Mem_IPW_MainFunction(Mem_InstanceIdType InstanceId);
-
 #endif /* MEM_IPW_H */
