@@ -1,73 +1,137 @@
 #include "Mem_IPW.h"
+#include "Flash_IP.h"
 
 /**
- * @brief  Chuyển đổi kết quả từ Flash_IP sang chuẩn của tầng Mem_IPW
+ * @brief Khởi tạo phần cứng Flash và Mở khóa thanh ghi CR
  */
-static Mem_IPW_JobResultType Mem_IPW_ConvertResult(Flash_IP_JobResultType flashResult) {
-    Mem_IPW_JobResultType ipwResult;
-
-    switch (flashResult) {
-        case FLASH_IP_JOB_OK:
-            ipwResult = MEM_IPW_JOB_OK;
-            break;
-
-        case FLASH_IP_WRITE_PROTECT_ERROR:
-            ipwResult = MEM_IPW_WRITE_PROTECT_ERR;
-            break;
-
-        case FLASH_IP_ALIGNMENT_ERROR:
-            ipwResult = MEM_IPW_ALIGNMENT_ERR;
-            break;
-
-        case FLASH_IP_JOB_FAILED:
-        default:
-            ipwResult = MEM_IPW_JOB_FAILED;
-            break;
-    }
-
-    return ipwResult;
-}
-
-
-void Mem_IPW_Init(void) {
-    /* Ủy quyền khởi tạo phần cứng cho driver Flash IP */
+void Mem_IPW_Init(const Mem_ConfigType* ConfigPtr) 
+{
+    (void)ConfigPtr; /* Trong cấu hình Pre-Compile, tham số này là NULL */
+    
     Flash_IP_Init();
+    Flash_IP_Unlock();
 }
 
-Mem_IPW_JobResultType Mem_IPW_Read(uint32 address, uint8 *targetPtr, uint32 length) {
-    Flash_IP_JobResultType flashResult;
+/**
+ * @brief Hỏi trạng thái phần cứng từ Flash_IP
+ */
+Mem_Ipw_StatusType Mem_IPW_GetStatus(Mem_InstanceIdType InstanceId) 
+{
+    (void)InstanceId;
+    
+    Flash_IP_JobResultType hwStatus = Flash_IP_GetStatus();
+    
+    if (hwStatus == FLASH_IP_JOB_BUSY) 
+    {
+        return MEM_IPW_BUSY;
+    }
+    
+    return MEM_IPW_IDLE;
+}
 
-    if (targetPtr == NULL_PTR) {
-        return MEM_IPW_JOB_FAILED;
+/**
+ * @brief Thực hiện đọc dữ liệu tuyến tính
+ */
+Std_ReturnType Mem_IPW_Read(Mem_InstanceIdType InstanceId, 
+                             Mem_AddressType Address, 
+                             Mem_DataType* DataPtr, 
+                             Mem_LengthType Length) 
+{
+    (void)InstanceId;
+    
+    Flash_IP_JobResultType res = Flash_IP_Read(Address, DataPtr, Length);
+    
+    if (res == FLASH_IP_JOB_OK) 
+    {
+        return E_OK;
+    }
+    
+    return E_NOT_OK;
+}
+
+/**
+ * @brief Đẩy lệnh ghi khối dữ liệu xuống Flash_IP
+ */
+Std_ReturnType Mem_IPW_Write(Mem_InstanceIdType InstanceId, 
+                              Mem_AddressType Address, 
+                              const Mem_DataType* DataPtr, 
+                              Mem_LengthType Length) 
+{
+    (void)InstanceId;
+    
+    /* Ghi khối dữ liệu 32-bit Word xuống Flash IP */
+    Flash_IP_JobResultType res = Flash_IP_Write(Address, DataPtr, Length);
+    
+    if (res == FLASH_IP_JOB_BUSY) 
+    {
+        return E_OK; /* Báo cho tầng Mem ở trên biết lệnh đã kích hoạt thành công */
+    }
+    
+    return E_NOT_OK;
+}
+
+/**
+ * @brief Chuyển đổi Địa chỉ vật lý (Address) -> SectorNum (0..7) và phát lệnh Xóa
+ */
+Std_ReturnType Mem_IPW_Erase(Mem_InstanceIdType InstanceId, 
+                              Mem_AddressType Address, 
+                              Mem_LengthType Length) 
+{
+    (void)InstanceId;
+    (void)Length; /* Tầng Mem ở trên đã xác thực độ dài hợp lệ bằng Mem_ValidateAddressAndLength */
+
+    /* Map từ địa chỉ dạng byte sang Sector ID của phần cứng */
+    uint8 sectorNum = Flash_IP_GetSectorFromAddress(Address);
+
+    if (sectorNum != 0xFFU) 
+    {
+        Flash_IP_JobResultType res = Flash_IP_Erase(sectorNum);
+        
+        if (res == FLASH_IP_JOB_BUSY) 
+        {
+            return E_OK; /* Lệnh xóa đã được phát xuống phần cứng */
+        }
     }
 
-    /* Gọi API đọc bên dưới Flash IP */
-    flashResult = Flash_IP_Read(address, targetPtr, length);
-
-    /* Chuyển đổi và trả về kết quả */
-    return Mem_IPW_ConvertResult(flashResult);
+    return E_NOT_OK;
 }
 
-Mem_IPW_JobResultType Mem_IPW_Write(uint32 address, const uint8 *sourcePtr, uint32 length) {
-    Flash_IP_JobResultType flashResult;
-
-    if (sourcePtr == NULL_PTR) {
-        return MEM_IPW_JOB_FAILED;
+/**
+ * @brief Kiểm tra dữ liệu rỗng (0xFF)
+ */
+Std_ReturnType Mem_IPW_BlankCheck(Mem_InstanceIdType InstanceId, 
+                                   Mem_AddressType Address, 
+                                   Mem_LengthType Length) 
+{
+    (void)InstanceId;
+    
+    Flash_IP_JobResultType res = Flash_IP_BlankCheck(Address, Length);
+    
+    if (res == FLASH_IP_JOB_OK) 
+    {
+        return E_OK; /* Vùng nhớ hoàn toàn rỗng */
     }
-
-    /* Gọi API ghi bên dưới Flash IP */
-    flashResult = Flash_IP_Write(address, sourcePtr, length);
-
-    /* Chuyển đổi và trả về kết quả */
-    return Mem_IPW_ConvertResult(flashResult);
+    
+    return E_NOT_OK; /* Vùng nhớ chứa dữ liệu hoặc bị lỗi */
 }
 
-Mem_IPW_JobResultType Mem_IPW_Erase(uint8 sectorNum) {
-    Flash_IP_JobResultType flashResult;
+/**
+ * @brief Khóa thanh ghi Flash để hủy bỏ tác vụ nghi vấn
+ */
+void Mem_IPW_Cancel(Mem_InstanceIdType InstanceId) 
+{
+    (void)InstanceId;
+    
+    /* Khóa thanh ghi điều khiển Flash để bảo vệ bộ nhớ */
+    Flash_IP_Lock();
+    Flash_IP_Unlock(); /* Reset lại trạng thái sẵn sàng */
+}
 
-    /* Gọi API xóa Sector bên dưới Flash IP */
-    flashResult = Flash_IP_Erase(sectorNum);
-
-    /* Chuyển đổi và trả về kết quả */
-    return Mem_IPW_ConvertResult(flashResult);
+/**
+ * @brief Hàm chu kỳ nội bộ của IPW
+ */
+void Mem_IPW_MainFunction(Mem_InstanceIdType InstanceId) 
+{
+    (void)InstanceId;
+    /* Dành cho mở rộng các tác vụ quét phần cứng theo chu kỳ nếu cần */
 }

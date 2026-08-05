@@ -1,38 +1,67 @@
 #ifndef MEM_IPW_H
 #define MEM_IPW_H
 
-#include "Mem_IPW_Types.h"
-#include "Flash_IP.h"
+#include "Mem_Cfg.h"
 #include "Std_Types.h"
 
-/**
- * @brief  Khởi tạo tầng IP Wrapper và Driver Flash phần cứng bên dưới
- */
-void Mem_IPW_Init(void);
+/* Trạng thái nội bộ của tầng IPW */
+typedef enum {
+    MEM_IPW_IDLE = 0U,
+    MEM_IPW_BUSY = 1U
+} Mem_Ipw_StatusType;
+
+/* ============================================================================
+ * NGUYÊN MẪU HÀM TẦNG MEM_IPW
+ * ============================================================================ */
 
 /**
- * @brief  Đọc dữ liệu từ bộ nhớ Flash thông qua Flash_IP
- * @param  address   Địa chỉ vật lý bắt đầu đọc
- * @param  targetPtr Con trỏ đệm chứa dữ liệu đầu ra
- * @param  length    Số lượng Byte cần đọc
- * @return Mem_IPW_JobResultType Kết quả thực thi
+ * @brief Khởi tạo phần cứng Flash thông qua Flash_IP Driver
  */
-Mem_IPW_JobResultType Mem_IPW_Read(uint32 address, uint8 *targetPtr, uint32 length);
+void Mem_Ipw_Init(const Mem_ConfigType* ConfigPtr);
 
 /**
- * @brief  Ghi dữ liệu vào bộ nhớ Flash thông qua Flash_IP
- * @param  address   Địa chỉ vật lý bắt đầu ghi
- * @param  sourcePtr Con trỏ chứa dữ liệu cần ghi
- * @param  length    Số lượng Byte cần ghi
- * @return Mem_IPW_JobResultType Kết quả thực thi
+ * @brief Lấy trạng thái bận/rảnh của phần cứng Flash
  */
-Mem_IPW_JobResultType Mem_IPW_Write(uint32 address, const uint8 *sourcePtr, uint32 length);
+Mem_Ipw_StatusType Mem_IPW_GetStatus(Mem_InstanceIdType InstanceId);
 
 /**
- * @brief  Xóa Sector bộ nhớ Flash thông qua Flash_IP
- * @param  sectorNum Chỉ số Sector cần xóa
- * @return Mem_IPW_JobResultType Kết quả thực thi
+ * @brief Đọc dữ liệu trực tiếp từ bus bộ nhớ Flash
  */
-Mem_IPW_JobResultType Mem_IPW_Erase(uint8 sectorNum);
+Std_ReturnType Mem_IPW_Read(Mem_InstanceIdType InstanceId, 
+                             Mem_AddressType Address, 
+                             Mem_DataType* DataPtr, 
+                             Mem_LengthType Length);
+
+/**
+ * @brief Đẩy lệnh ghi khối dữ liệu xuống phần cứng Flash
+ */
+Std_ReturnType Mem_IPW_Write(Mem_InstanceIdType InstanceId, 
+                              Mem_AddressType Address, 
+                              const Mem_DataType* DataPtr, 
+                              Mem_LengthType Length);
+
+/**
+ * @brief Chuyển đổi Địa chỉ sang Sector ID và kích hoạt xóa Sector phần cứng
+ */
+Std_ReturnType Mem_IPW_Erase(Mem_InstanceIdType InstanceId, 
+                              Mem_AddressType Address, 
+                              Mem_LengthType Length);
+
+/**
+ * @brief Kiểm tra xem vùng nhớ Flash có hoàn toàn rỗng (0xFF) hay không
+ */
+Std_ReturnType Mem_IPW_BlankCheck(Mem_InstanceIdType InstanceId, 
+                                   Mem_AddressType Address, 
+                                   Mem_LengthType Length);
+
+/**
+ * @brief Hủy tác vụ phần cứng nếu đang thực thi
+ */
+void Mem_IPW_Cancel(Mem_InstanceIdType InstanceId);
+
+/**
+ * @brief Hàm chu kỳ ngầm của IPW (Xử lý Timeout hoặc cờ phần cứng nếu cần)
+ */
+void Mem_IPW_MainFunction(Mem_InstanceIdType InstanceId);
 
 #endif /* MEM_IPW_H */
