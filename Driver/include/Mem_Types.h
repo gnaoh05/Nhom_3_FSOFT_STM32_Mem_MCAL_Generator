@@ -25,13 +25,19 @@ typedef struct {
     uint32  MemEraseSectorSize;      /* Kích thước của 1 Sector (vd: 16KB, 64KB) */
     uint32  MemMinReadSize;          /* Kích thước đọc nhỏ nhất (1 byte) */
     uint32  MemWritePageSize;        /* Kích thước ghi nhỏ nhất */
+    uint32  MemSpecifiedEraseCycles; /* Số chu kỳ xóa tối đa của phần cứng */
 } Mem_SectorBatchConfigType;
 
-/* [SWS_Mem_10000] Cấu trúc tham số cấu hình tổng thể của Mem driver */
+/* Cấu trúc tham số cấu hình cho TỪNG THIẾT BỊ (Instance) */
 typedef struct {
-    uint8                             MemInstanceId;    /* ID thiết bị (0) */
-    uint16                            NumberOfBatches;  /* Số lượng Batch */
-    const Mem_SectorBatchConfigType*  SectorBatchesPtr; /* Con trỏ trỏ tới mảng cấu hình Sector */
+    uint8                             MemInstanceId;      /* ID thiết bị (0) */
+    uint16                            MemNumberOfBatches; /* Số lượng Batch */
+    const Mem_SectorBatchConfigType*  MemSectorBatches;   /* Con trỏ trỏ tới mảng cấu hình Sector */
+} Mem_InstanceConfigType;
+
+/* [SWS_Mem_10000] Cấu trúc tham số cấu hình TỔNG THỂ của toàn bộ Mem driver */
+typedef struct {
+    const Mem_InstanceConfigType* MemInstances; /* Mảng cấu hình các Instance */
 } Mem_ConfigType;
 
 #endif /* MEM_TYPES_H */

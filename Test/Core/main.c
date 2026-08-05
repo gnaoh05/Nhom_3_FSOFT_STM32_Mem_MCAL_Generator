@@ -13,10 +13,12 @@ int main() {
     /* 2. GỌI LỆNH ĐỌC BẤT ĐỒNG BỘ */
     printf("2. Goi Mem_Read...\n");
     Mem_DataType dummyBuffer[10];
+    
+    /* API trả về ngay lập tức, IPW chưa thực sự được gọi */
     Std_ReturnType status = Mem_Read(0, 0x08000000, dummyBuffer, 10);
     
     if (status == E_OK) {
-        printf("Lệnh Read duoc tiep nhan!\n");
+        printf("Lenh Read duoc tiep nhan (Vao context queue)!\n");
         printf("Trang thai Job ngay luc nay: %d (1 = PENDING)\n\n", Mem_GetJobResult(0));
     }
 
@@ -25,7 +27,7 @@ int main() {
     int tick = 0;
     while (Mem_GetJobResult(0) == MEM_JOB_PENDING) {
         printf("--- Tick %d ---\n", ++tick);
-        Mem_MainFunction(); /* Quét trạng thái */
+        Mem_MainFunction(); /* Quét trạng thái, IPW thực sự bắt đầu ở Tick 1 */
     }
 
     printf("\n4. TEST THANH CONG!\n");
