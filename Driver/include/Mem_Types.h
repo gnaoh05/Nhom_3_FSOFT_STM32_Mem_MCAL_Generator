@@ -2,7 +2,7 @@
 #define MEM_TYPES_H
 
 #include "Std_Types.h"
-#include "MemAcc_GeneralTypes.h"
+// #include "MemAcc_GeneralTypes.h"
 
 /* --- [SWS_Mem_10002 -> 10026] Định nghĩa kiểu đặc thù của Driver --- */
 typedef MemAcc_AddressType Mem_AddressType;     /* Địa chỉ vật lý */
@@ -25,7 +25,6 @@ typedef struct {
     uint32  MemEraseSectorSize;      /* Kích thước của 1 Sector (vd: 16KB, 64KB) */
     uint32  MemMinReadSize;          /* Kích thước đọc nhỏ nhất (1 byte) */
     uint32  MemWritePageSize;        /* Kích thước ghi nhỏ nhất */
-<<<<<<< HEAD
     uint32  MemSpecifiedEraseCycles; /* Số chu kỳ xóa tối đa của phần cứng */
 } Mem_SectorBatchConfigType;
 
