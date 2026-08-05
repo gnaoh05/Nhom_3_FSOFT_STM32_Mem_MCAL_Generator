@@ -4,63 +4,73 @@
     <Module name="MemDriver" vendor="FSoft_Automotive_Team" target="STM32F401RE">
         
         <!-- ========================================================== -->
-        <!-- CONTAINER 1: MEM_GENERAL (Các cấu hình chung của Module)    -->
+        <!-- CONTAINER 1: FLASH_IP_CONFIG (Cấu hình phần cứng Flash IP) -->
+        <!-- Yêu cầu từ bạn tầng IP                                     -->
         <!-- ========================================================== -->
-        <Container name="MemGeneral" description="General configuration parameters for MemDriver">
+        <Container name="FlashIPConfig" description="Flash IP Hardware Configuration (ACR Register)">
+            <Parameter name="FlashLatency" type="ENUM" default="2"
+                       options="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
+                       description="Số Wait State (0-15 WS) phù hợp xung nhịp CPU"/>
+
+            <Parameter name="FlashPrefetchEnable" type="BOOLEAN" default="true"
+                       description="Bật/Tắt Prefetch Buffer (FLASH_ACR_PRFTEN)"/>
+
+            <Parameter name="FlashICacheEnable" type="BOOLEAN" default="true"
+                       description="Bật/Tắt Instruction Cache (FLASH_ACR_ICEN)"/>
+
+            <Parameter name="FlashDCacheEnable" type="BOOLEAN" default="true"
+                       description="Bật/Tắt Data Cache (FLASH_ACR_DCEN)"/>
+
+            <Parameter name="FlashTimeoutValue" type="HEX" default="0x000FFFFF"
+                       description="Thời gian chờ (Timeout loops) tránh treo MCU"/>
+
+            <Parameter name="FlashPSize" type="ENUM" default="PSIZE_x32"
+                       options="PSIZE_x8,PSIZE_x16,PSIZE_x32,PSIZE_x64"
+                       description="Kích thước song song khi nạp (x8, x16, x32, x64)"/>
+
+            <Parameter name="FlashBaseAddr" type="HEX" default="0x40023C00"
+                       description="Địa chỉ cơ sở thanh ghi Flash Controller (chip-specific)"/>
+        </Container>
+
+        <!-- ========================================================== -->
+        <!-- CONTAINER 2: MEM_GENERAL (Cấu hình tầng Mem AUTOSAR)       -->
+        <!-- Yêu cầu từ bạn tầng Mem Core                               -->
+        <!-- ========================================================== -->
+        <Container name="MemGeneral" description="Mem AUTOSAR Configuration Parameters for Mem_Cfg.h">
             <!-- Bật/tắt phát hiện lỗi trong quá trình phát triển (DET) -->
-            <Parameter name="MemDevErrorDetect" type="BOOLEAN" default="true" 
-                       description="Switches the Development Error Detection and Notification ON or OFF"/>
-            
-            <Parameter name="MemInvocation" type="ENUM" default="DIRECT_STATIC" options="DIRECT_STATIC,INDIRECT_DYNAMIC,INDIRECT_STATIC"
-                       description="Invocation mode of the Mem driver"/>
+            <Parameter name="MemDevErrorDetect" type="BOOLEAN" default="true"
+                       description="Switches Development Error Detection ON or OFF"/>
 
-            <Parameter name="MemMainFunctionPeriod" type="FLOAT" default="0.005" unit="S"
-                       description="Period of the main function"/>
-                       
-            <!-- Kích thước bộ đệm trang ghi tối đa (Page Size theo Byte) -->
-            <Parameter name="MemWritePageSize" type="INTEGER" min="1" max="128" default="4" unit="BYTES"
-                       description="Size of a memory write page in bytes (STM32F4 word programming = 4 bytes)"/>
-            
-            <!-- Thời gian chờ tối đa cho thao tác xóa/ghi (Timeout theo mili-giây) -->
-            <Parameter name="MemTimeoutDuration" type="INTEGER" min="10" max="5000" default="1000" unit="MS"
-                       description="Timeout duration for flash erase and write operations"/>
+            <!-- Số lượng instance Flash (STM32F401RE chỉ có 1 Flash nội) -->
+            <Parameter name="MemMaxInstances" type="INTEGER" min="1" max="255" default="1"
+                       description="Số lượng Flash instance (STM32F401RE = 1)"/>
+
+            <!-- Index của module Mem -->
+            <Parameter name="MemIndex" type="INTEGER" min="0" max="255" default="0"
+                       description="Index của module Mem"/>
+
+            <!-- Giá trị khi xóa Flash (STM32 = 0xFF) -->
+            <Parameter name="MemErasedValue" type="HEX" default="0xFF"
+                       description="Giá trị khi xóa Flash STM32 (0xFF)"/>
         </Container>
 
         <!-- ========================================================== -->
-        <!-- CONTAINER 2: MEM_INSTANCE (Cấu hình cụ thể cho khối Flash)  -->
+        <!-- CONTAINER 3: MEM_INSTANCE (Cấu hình Sector vật lý)         -->
+        <!-- Dùng chung cho cả Mem_Cfg.c                                 -->
         <!-- ========================================================== -->
-        <Container name="MemInstance" description="Configuration of the flash memory instance">
-            <Parameter name="MemInstanceId" type="INTEGER" min="0" max="255" default="0"
-                       description="Unique ID of the memory instance"/>
-            
-            <Parameter name="MemBaseAddress" type="HEX" default="0x08000000"
-                       description="Base address of the STM32F401RE Flash memory"/>
-            
-            <Parameter name="MemTotalSize" type="INTEGER" default="512" unit="KB" readonly="true"
-                       description="Total flash memory size of STM32F401RE Nucleo"/>
-
+        <Container name="MemInstance" description="Physical Flash Sector Configuration">
             <!-- Danh sách Sector thực tế của STM32F401RE (RM0368) -->
-            <!-- Tool CodeGen sẽ đọc danh sách này để hiển thị lên bảng Treeview trên GUI -->
-            <List name="MemSectorBatch" description="List of physical flash sectors in STM32F401RE">
-                <Item id="0" name="SECTOR_0" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x08000000" MemEndAddress="0x08003FFF" write_protect="false"/>
-                <Item id="1" name="SECTOR_1" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x08004000" MemEndAddress="0x08007FFF" write_protect="false"/>
-                <Item id="2" name="SECTOR_2" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x08008000" MemEndAddress="0x0800BFFF" write_protect="false"/>
-                <Item id="3" name="SECTOR_3" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x0800C000" MemEndAddress="0x0800FFFF" write_protect="false"/>
-                <Item id="4" name="SECTOR_4" MemNumberOfSectors="1" MemEraseSectorSize="65536"  MemStartAddress="0x08010000" MemEndAddress="0x0801FFFF" write_protect="false"/>
-                <Item id="5" name="SECTOR_5" MemNumberOfSectors="1" MemEraseSectorSize="131072" MemStartAddress="0x08020000" MemEndAddress="0x0803FFFF" write_protect="false"/>
-                <Item id="6" name="SECTOR_6" MemNumberOfSectors="1" MemEraseSectorSize="131072" MemStartAddress="0x08040000" MemEndAddress="0x0805FFFF" write_protect="false"/>
-                <Item id="7" name="SECTOR_7" MemNumberOfSectors="1" MemEraseSectorSize="131072" MemStartAddress="0x08060000" MemEndAddress="0x0807FFFF" write_protect="false"/>
+            <!-- Tool CodeGen sẽ nhóm các sector cùng kích thước để sinh Sector Batch -->
+            <List name="MemSectorBatch" description="Danh sách các Sector vật lý của Flash STM32F401RE">
+                <Item id="0" name="SECTOR_0" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x08000000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
+                <Item id="1" name="SECTOR_1" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x08004000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
+                <Item id="2" name="SECTOR_2" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x08008000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
+                <Item id="3" name="SECTOR_3" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x0800C000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
+                <Item id="4" name="SECTOR_4" MemNumberOfSectors="1" MemEraseSectorSize="65536"  MemStartAddress="0x08010000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
+                <Item id="5" name="SECTOR_5" MemNumberOfSectors="1" MemEraseSectorSize="131072" MemStartAddress="0x08020000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
+                <Item id="6" name="SECTOR_6" MemNumberOfSectors="1" MemEraseSectorSize="131072" MemStartAddress="0x08040000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
+                <Item id="7" name="SECTOR_7" MemNumberOfSectors="1" MemEraseSectorSize="131072" MemStartAddress="0x08060000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
             </List>
-        </Container>
-
-        <!-- ========================================================== -->
-        <!-- CONTAINER 3: MEM_API_CONFIG (Cấu hình các API được sinh ra)  -->
-        <!-- ========================================================== -->
-        <Container name="MemApiConfig" description="Enable or disable specific AUTOSAR APIs in generated code">
-            <Parameter name="MemReadApi" type="BOOLEAN" default="true" description="Enable Mem_Read API"/>
-            <Parameter name="MemWriteApi" type="BOOLEAN" default="true" description="Enable Mem_Write API"/>
-            <Parameter name="MemEraseApi" type="BOOLEAN" default="true" description="Enable Mem_Erase API"/>
-            <Parameter name="MemGetStatusApi" type="BOOLEAN" default="true" description="Enable Mem_GetStatus API"/>
         </Container>
 
     </Module>

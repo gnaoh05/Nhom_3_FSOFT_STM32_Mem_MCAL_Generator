@@ -1,73 +1,36 @@
 #include "Mem_IPW.h"
+#include "Mem_Cfg.h"   /* Cần MEM_MAX_INSTANCES */
+#include <stdio.h>     /* Chỉ dùng để in log test trên PC */
 
-/**
- * @brief  Chuyển đổi kết quả từ Flash_IP sang chuẩn của tầng Mem_IPW
- */
-static Mem_IPW_JobResultType Mem_IPW_ConvertResult(Flash_IP_JobResultType flashResult) {
-    Mem_IPW_JobResultType ipwResult;
+/* Biến giả lập độ trễ phần cứng (để test cờ PENDING) */
+/* Không dùng static vì Mem.c cần truy cập qua extern */
+uint8 mock_delay[MEM_MAX_INSTANCES] = {0};
 
-    switch (flashResult) {
-        case FLASH_IP_JOB_OK:
-            ipwResult = MEM_IPW_JOB_OK;
-            break;
+/* Mô phỏng hàm Read */
+Std_ReturnType Mem_Ipw_Read(Mem_InstanceIdType instanceId, Mem_AddressType sourceAddress, Mem_DataType* destinationDataPtr, Mem_LengthType length) {
+    printf("[IPW] Da nhan lenh READ tai dia chi 0x%08X, do dai %d bytes\n", sourceAddress, length);
+    
+    /* Mô phỏng phần cứng cần 3 chu kỳ MainFunction mới đọc xong */
+    mock_delay[instanceId] = 3; 
+    
+    return E_OK; /* Trả về E_OK nghĩa là IPW đã tiếp nhận lệnh thành công */
+}
 
-        case FLASH_IP_WRITE_PROTECT_ERROR:
-            ipwResult = MEM_IPW_WRITE_PROTECT_ERR;
-            break;
+/* Các hàm Write, Erase làm tương tự (Trả về E_OK) */
+Std_ReturnType Mem_Ipw_Write(Mem_InstanceIdType instanceId, Mem_AddressType targetAddress, const Mem_DataType* sourceDataPtr, Mem_LengthType length) {
+    return E_OK;
+}
+Std_ReturnType Mem_Ipw_Erase(Mem_InstanceIdType instanceId, Mem_AddressType targetAddress, Mem_LengthType length) {
+    return E_OK;
+}
+Std_ReturnType Mem_Ipw_BlankCheck(Mem_InstanceIdType instanceId, Mem_AddressType targetAddress, Mem_LengthType length) {
+    return E_OK;
+}
 
-        case FLASH_IP_ALIGNMENT_ERROR:
-            ipwResult = MEM_IPW_ALIGNMENT_ERR;
-            break;
-
-        case FLASH_IP_JOB_FAILED:
-        default:
-            ipwResult = MEM_IPW_JOB_FAILED;
-            break;
+/* Hàm giả lập ngắt/xử lý ngầm của IPW */
+void Mem_Ipw_MainFunction(Mem_InstanceIdType instanceId) {
+    if (mock_delay[instanceId] > 0) {
+        mock_delay[instanceId]--;
+        printf("[IPW] Phan cung dang xu ly... (Delay con %d)\n", mock_delay[instanceId]);
     }
-
-    return ipwResult;
-}
-
-
-void Mem_IPW_Init(void) {
-    /* Ủy quyền khởi tạo phần cứng cho driver Flash IP */
-    Flash_IP_Init();
-}
-
-Mem_IPW_JobResultType Mem_IPW_Read(uint32 address, uint8 *targetPtr, uint32 length) {
-    Flash_IP_JobResultType flashResult;
-
-    if (targetPtr == NULL_PTR) {
-        return MEM_IPW_JOB_FAILED;
-    }
-
-    /* Gọi API đọc bên dưới Flash IP */
-    flashResult = Flash_IP_Read(address, targetPtr, length);
-
-    /* Chuyển đổi và trả về kết quả */
-    return Mem_IPW_ConvertResult(flashResult);
-}
-
-Mem_IPW_JobResultType Mem_IPW_Write(uint32 address, const uint8 *sourcePtr, uint32 length) {
-    Flash_IP_JobResultType flashResult;
-
-    if (sourcePtr == NULL_PTR) {
-        return MEM_IPW_JOB_FAILED;
-    }
-
-    /* Gọi API ghi bên dưới Flash IP */
-    flashResult = Flash_IP_Write(address, sourcePtr, length);
-
-    /* Chuyển đổi và trả về kết quả */
-    return Mem_IPW_ConvertResult(flashResult);
-}
-
-Mem_IPW_JobResultType Mem_IPW_Erase(uint8 sectorNum) {
-    Flash_IP_JobResultType flashResult;
-
-    /* Gọi API xóa Sector bên dưới Flash IP */
-    flashResult = Flash_IP_Erase(sectorNum);
-
-    /* Chuyển đổi và trả về kết quả */
-    return Mem_IPW_ConvertResult(flashResult);
 }

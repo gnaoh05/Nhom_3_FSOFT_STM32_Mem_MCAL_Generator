@@ -10,15 +10,16 @@ except ImportError:
     JINJA_AVAILABLE = False
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_DIR = os.path.abspath(os.path.join(BASE_DIR, "../templates/include"))
+INCLUDE_TEMPLATE_DIR = os.path.abspath(os.path.join(BASE_DIR, "../templates/include"))
+SRC_TEMPLATE_DIR = os.path.abspath(os.path.join(BASE_DIR, "../templates/src"))
 OUTPUT_DIR = os.path.abspath(os.path.join(BASE_DIR, "../../../Test/Generated_File"))
-EPD_FILE = os.path.abspath(os.path.join(BASE_DIR, "Fls_s32k118_lqfp48.epd"))
+EPD_FILE = os.path.abspath(os.path.join(BASE_DIR, "MemDriver.epd"))
 
 class MemConfiguratorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("AUTOSAR Mem Driver Configurator (EPD/EPC)")
-        self.root.geometry("950x850")
+        self.root.geometry("1050x900")
         
         self.epd_tree = None
         self.ui_vars = {} # Maps container_name -> { param_name: tk.Variable }
@@ -118,6 +119,11 @@ class MemConfiguratorApp:
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         
+        # Bind mouse wheel for scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
@@ -156,6 +162,8 @@ class MemConfiguratorApp:
                     options = param.get("options", "").split(",")
                     cb = ttk.Combobox(frame, textvariable=var, values=options, state="readonly", width=25)
                     cb.grid(row=row_idx, column=1, padx=5, pady=5, sticky="w")
+                    if p_desc:
+                        ttk.Label(frame, text=p_desc).grid(row=row_idx, column=2, padx=5, pady=5, sticky="w")
                     self.ui_vars[c_name][p_name] = var
                 else:
                     var = tk.StringVar(value=p_default)
@@ -165,9 +173,11 @@ class MemConfiguratorApp:
                         entry.config(state="readonly")
                     entry.grid(row=row_idx, column=1, padx=5, pady=5, sticky="w")
                     
-                    unit = param.get("unit")
-                    if unit:
-                        ttk.Label(frame, text=unit).grid(row=row_idx, column=2, padx=5, pady=5, sticky="w")
+                    desc_or_unit = param.get("unit", "")
+                    if p_desc:
+                        desc_or_unit = p_desc
+                    if desc_or_unit:
+                        ttk.Label(frame, text=desc_or_unit).grid(row=row_idx, column=2, padx=5, pady=5, sticky="w")
                         
                     self.ui_vars[c_name][p_name] = var
                     
@@ -192,7 +202,13 @@ class MemConfiguratorApp:
                 if not headers:
                     continue
                     
-                headers = sorted(list(headers))
+                # Define a fixed column order for readability
+                preferred_order = ["id", "name", "MemStartAddress", "MemEraseSectorSize",
+                                   "MemNumberOfSectors", "MemMinReadSize", "MemWritePageSize",
+                                   "MemSpecifiedEraseCycles"]
+                ordered_headers = [h for h in preferred_order if h in headers]
+                remaining = sorted([h for h in headers if h not in preferred_order])
+                headers = ordered_headers + remaining
                 
                 tree_frame = ttk.Frame(frame)
                 tree_frame.grid(row=row_idx, column=0, columnspan=3, padx=5, pady=5, sticky="we")
@@ -202,13 +218,18 @@ class MemConfiguratorApp:
                 tree = ttk.Treeview(tree_frame, columns=headers, show="headings", height=8, selectmode="browse")
                 for h in headers:
                     tree.heading(h, text=h)
-                    tree.column(h, width=120, anchor="center")
+                    col_width = 140 if h in ("MemStartAddress", "MemEraseSectorSize") else 100
+                    tree.column(h, width=col_width, anchor="center")
                     
                 for item_dict in items_data:
                     row_vals = [item_dict.get(h, "") for h in headers]
                     tree.insert("", "end", values=row_vals)
                     
+                # Add horizontal scrollbar for wide table
+                h_scrollbar = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
+                tree.configure(xscrollcommand=h_scrollbar.set)
                 tree.pack(fill="x", expand=True)
+                h_scrollbar.pack(fill="x")
                 
                 self.trees[(c_name, l_name)] = (tree, headers)
                 
@@ -237,18 +258,28 @@ class MemConfiguratorApp:
         
         edit_win = tk.Toplevel(self.root)
         edit_win.title("Add New Item")
-        edit_win.geometry("400x400")
+        edit_win.geometry("450x500")
         edit_win.grab_set()
+        
+        # Create scrollable frame for many fields
+        canvas = tk.Canvas(edit_win)
+        scrollbar = ttk.Scrollbar(edit_win, orient="vertical", command=canvas.yview)
+        scroll_frame = ttk.Frame(canvas)
+        scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
         
         entries = {}
         for idx, h in enumerate(headers):
-            ttk.Label(edit_win, text=h + ":").grid(row=idx, column=0, padx=10, pady=5, sticky="e")
-            var = tk.StringVar(value="")
-            if h == "write_protect":
-                var.set("false")
-                ttk.Checkbutton(edit_win, variable=var, onvalue="true", offvalue="false").grid(row=idx, column=1, padx=10, pady=5, sticky="w")
-            else:
-                ttk.Entry(edit_win, textvariable=var, width=30).grid(row=idx, column=1, padx=10, pady=5, sticky="w")
+            ttk.Label(scroll_frame, text=h + ":").grid(row=idx, column=0, padx=10, pady=5, sticky="e")
+            # Auto-fill id based on current tree item count
+            default_val = ""
+            if h == "id":
+                default_val = str(len(tree.get_children()))
+            var = tk.StringVar(value=default_val)
+            ttk.Entry(scroll_frame, textvariable=var, width=30).grid(row=idx, column=1, padx=10, pady=5, sticky="w")
             entries[h] = var
             
         def save_new():
@@ -256,7 +287,7 @@ class MemConfiguratorApp:
             tree.insert("", "end", values=new_vals)
             edit_win.destroy()
             
-        ttk.Button(edit_win, text="Add", command=save_new).grid(row=len(headers), column=0, columnspan=2, pady=15)
+        ttk.Button(scroll_frame, text="Add", command=save_new).grid(row=len(headers), column=0, columnspan=2, pady=15)
 
     def edit_tree_item(self, c_name, l_name):
         tree, headers = self.trees[(c_name, l_name)]
@@ -270,19 +301,25 @@ class MemConfiguratorApp:
         
         edit_win = tk.Toplevel(self.root)
         edit_win.title("Edit Item")
-        edit_win.geometry("400x400")
+        edit_win.geometry("450x500")
         edit_win.grab_set()
+        
+        # Create scrollable frame for many fields
+        canvas = tk.Canvas(edit_win)
+        scrollbar = ttk.Scrollbar(edit_win, orient="vertical", command=canvas.yview)
+        scroll_frame = ttk.Frame(canvas)
+        scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
         
         entries = {}
         for idx, h in enumerate(headers):
-            ttk.Label(edit_win, text=h + ":").grid(row=idx, column=0, padx=10, pady=5, sticky="e")
+            ttk.Label(scroll_frame, text=h + ":").grid(row=idx, column=0, padx=10, pady=5, sticky="e")
             val = current_vals[idx] if idx < len(current_vals) else ""
             var = tk.StringVar(value=val)
-            if h == "write_protect":
-                if not val: var.set("false")
-                ttk.Checkbutton(edit_win, variable=var, onvalue="true", offvalue="false").grid(row=idx, column=1, padx=10, pady=5, sticky="w")
-            else:
-                ttk.Entry(edit_win, textvariable=var, width=30).grid(row=idx, column=1, padx=10, pady=5, sticky="w")
+            ttk.Entry(scroll_frame, textvariable=var, width=30).grid(row=idx, column=1, padx=10, pady=5, sticky="w")
             entries[h] = var
             
         def save_edit():
@@ -290,7 +327,7 @@ class MemConfiguratorApp:
             tree.item(item_id, values=new_vals)
             edit_win.destroy()
             
-        ttk.Button(edit_win, text="Save", command=save_edit).grid(row=len(headers), column=0, columnspan=2, pady=15)
+        ttk.Button(scroll_frame, text="Save", command=save_edit).grid(row=len(headers), column=0, columnspan=2, pady=15)
 
     def delete_tree_item(self, c_name, l_name):
         tree, headers = self.trees[(c_name, l_name)]
@@ -308,6 +345,90 @@ class MemConfiguratorApp:
             item_dict = {h: str(v) for h, v in zip(headers, vals)}
             items.append(item_dict)
         return items
+
+    def _group_sectors_into_batches(self, sector_list):
+        """
+        Nhóm các sector liên tiếp có cùng kích thước (MemEraseSectorSize) thành 1 batch.
+        
+        VD: 4 sector 16KB liên tiếp -> 1 batch với MemNumberOfSectors=4
+            1 sector 64KB           -> 1 batch với MemNumberOfSectors=1
+            3 sector 128KB liên tiếp -> 1 batch với MemNumberOfSectors=3
+            
+        Trả về list các dict đã nhóm, sẵn sàng cho Jinja2 template.
+        """
+        if not sector_list:
+            return []
+        
+        # Sắp xếp theo StartAddress tăng dần
+        sorted_sectors = sorted(sector_list, key=lambda s: int(str(s.get("MemStartAddress", "0")), 0))
+        
+        batches = []
+        current_batch = None
+        
+        for sector in sorted_sectors:
+            erase_size = int(str(sector.get("MemEraseSectorSize", "0")))
+            start_addr = str(sector.get("MemStartAddress", "0"))
+            start_addr_int = int(start_addr, 0)
+            min_read = str(sector.get("MemMinReadSize", "1"))
+            write_page = str(sector.get("MemWritePageSize", "1"))
+            erase_cycles = str(sector.get("MemSpecifiedEraseCycles", "10000"))
+            
+            # Kiểm tra xem sector có liên tiếp và cùng kích thước với batch hiện tại không
+            need_new_batch = True
+            if current_batch is not None and current_batch["_erase_size"] == erase_size:
+                # Kiểm tra tính liên tục về địa chỉ
+                expected_next = int(current_batch["MemStartAddress"], 0) + \
+                                current_batch["MemNumberOfSectors"] * current_batch["_erase_size"]
+                if start_addr_int == expected_next:
+                    need_new_batch = False
+            
+            if need_new_batch:
+                # Bắt đầu batch mới
+                current_batch = {
+                    "MemStartAddress": start_addr,
+                    "MemNumberOfSectors": 1,
+                    "MemEraseSectorSize": str(erase_size),
+                    "MemMinReadSize": min_read,
+                    "MemWritePageSize": write_page,
+                    "MemSpecifiedEraseCycles": erase_cycles,
+                    "_erase_size": erase_size,
+                    "_sector_names": [sector.get("name", "")]
+                }
+                batches.append(current_batch)
+            else:
+                # Cộng thêm sector vào batch hiện tại
+                current_batch["MemNumberOfSectors"] += 1
+                current_batch["_sector_names"].append(sector.get("name", ""))
+        
+        # Tạo comment cho mỗi batch
+        for i, batch in enumerate(batches):
+            sector_names = batch.pop("_sector_names")
+            batch.pop("_erase_size")
+            
+            num_sectors = batch["MemNumberOfSectors"]
+            erase_size = int(batch["MemEraseSectorSize"])
+            
+            # Tạo size comment (VD: "16 KB", "64 KB", "128 KB")
+            if erase_size >= 1024:
+                batch["size_comment"] = f"{erase_size // 1024} KB"
+            else:
+                batch["size_comment"] = f"{erase_size} B"
+            
+            # Tạo comment mô tả batch
+            if num_sectors == 1:
+                batch["comment"] = f"Nhóm {i+1}: {sector_names[0]}"
+            else:
+                first_name = sector_names[0]
+                last_name = sector_names[-1]
+                # Extract sector numbers from names like "SECTOR_0"
+                try:
+                    first_num = first_name.split("_")[-1]
+                    last_num = last_name.split("_")[-1]
+                    batch["comment"] = f"Nhóm {i+1}: {num_sectors} Sector ({first_name} -> {last_name})"
+                except:
+                    batch["comment"] = f"Nhóm {i+1}: {num_sectors} Sector(s)"
+        
+        return batches
 
     def save_epc(self):
         filepath = filedialog.asksaveasfilename(initialdir=BASE_DIR, initialfile="MemDriver.epc", defaultextension=".epc", filetypes=[("EPC XML Files", "*.epc"), ("All Files", "*.*")])
@@ -384,42 +505,106 @@ class MemConfiguratorApp:
             messagebox.showerror("Error", "Thư viện 'jinja2' chưa được cài đặt!\nVui lòng chạy lệnh: pip install jinja2")
             return
 
+        # ================================================================
         # Build config dictionary for Jinja2
+        # ================================================================
         config = {}
         for c_name, params in self.ui_vars.items():
             config[c_name] = {}
             for p_name, var in params.items():
                 val = var.get()
+                # Convert boolean values to AUTOSAR STD_ON/STD_OFF
                 if val == "true":
                     val = "STD_ON"
                 elif val == "false":
                     val = "STD_OFF"
                 config[c_name][p_name] = val
-                
-            # Get list data directly from Treeviews
-            for (tc_name, tl_name), (tree, headers) in self.trees.items():
-                if tc_name == c_name:
-                    config[tl_name] = self.get_tree_data(c_name, tl_name)
 
+        # ================================================================
+        # Lấy raw sector list từ Treeview và nhóm thành batches
+        # ================================================================
+        raw_sectors = []
+        for (tc_name, tl_name), (tree, headers) in self.trees.items():
+            if tl_name == "MemSectorBatch":
+                raw_sectors = self.get_tree_data(tc_name, tl_name)
+                # Also store raw list in config for backward compatibility
+                config[tl_name] = raw_sectors
+        
+        sector_batches = self._group_sectors_into_batches(raw_sectors)
+
+        # ================================================================
+        # Tạo thư mục output nếu chưa có
+        # ================================================================
         if not os.path.exists(OUTPUT_DIR):
             os.makedirs(OUTPUT_DIR)
 
         try:
-            env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+            # ============================================================
+            # 1. Generate Mem_Cfg.h (từ templates/include)
+            # ============================================================
+            env_include = Environment(loader=FileSystemLoader(INCLUDE_TEMPLATE_DIR))
             
-            template_mem = env.get_template("Mem_Cfg.h.template")
-            mem_content = template_mem.render(config=config)
+            template_mem_h = env_include.get_template("Mem_Cfg.h.template")
+            mem_h_content = template_mem_h.render(config=config)
             with open(os.path.join(OUTPUT_DIR, "Mem_Cfg.h"), 'w', encoding='utf-8') as f:
-                f.write(mem_content)
-                
-            template_flash = env.get_template("Flash_IP_Cfg.h.template")
-            flash_content = template_flash.render(config=config)
-            with open(os.path.join(OUTPUT_DIR, "Flash_IP_Cfg.h"), 'w', encoding='utf-8') as f:
-                f.write(flash_content)
+                f.write(mem_h_content)
 
-            messagebox.showinfo("Thành công", f"Đã generate code thành công tại:\n{OUTPUT_DIR}")
+            # ============================================================
+            # 2. Generate Flash_IP_Cfg.h (từ templates/include)
+            #    Tính toán các giá trị derived từ PSIZE và sector table
+            # ============================================================
+            # PSIZE -> Write Alignment mapping
+            psize_to_alignment = {
+                "PSIZE_x8": 1,
+                "PSIZE_x16": 2,
+                "PSIZE_x32": 4,
+                "PSIZE_x64": 8,
+            }
+            psize_val = config.get("FlashIPConfig", {}).get("FlashPSize", "PSIZE_x32")
+            flash_ip_write_alignment = psize_to_alignment.get(psize_val, 4)
+            
+            # Đếm tổng số sector từ bảng sector
+            flash_ip_total_sectors = len(raw_sectors)
+            
+            template_flash_h = env_include.get_template("Flash_IP_Cfg.h.template")
+            flash_h_content = template_flash_h.render(
+                config=config,
+                flash_ip_write_alignment=flash_ip_write_alignment,
+                flash_ip_total_sectors=flash_ip_total_sectors
+            )
+            with open(os.path.join(OUTPUT_DIR, "Flash_IP_Cfg.h"), 'w', encoding='utf-8') as f:
+                f.write(flash_h_content)
+
+            # ============================================================
+            # 3. Generate Mem_Cfg.c (từ templates/src)
+            # ============================================================
+            env_src = Environment(loader=FileSystemLoader(SRC_TEMPLATE_DIR))
+            
+            template_mem_c = env_src.get_template("Mem_Cfg.c.template")
+            mem_c_content = template_mem_c.render(
+                config=config,
+                sector_batches=sector_batches
+            )
+            with open(os.path.join(OUTPUT_DIR, "Mem_Cfg.c"), 'w', encoding='utf-8') as f:
+                f.write(mem_c_content)
+
+            # ============================================================
+            # 4. Generate Flash_IP_Cfg.c (chỉ include header, không cần template)
+            # ============================================================
+            with open(os.path.join(OUTPUT_DIR, "Flash_IP_Cfg.c"), 'w', encoding='utf-8') as f:
+                f.write('#include "Flash_IP_Cfg.h"\n')
+
+            # ============================================================
+            # Thông báo thành công
+            # ============================================================
+            generated_files = ["Mem_Cfg.h", "Mem_Cfg.c", "Flash_IP_Cfg.h", "Flash_IP_Cfg.c"]
+            file_list = "\n".join([f"  ✓ {f}" for f in generated_files])
+            messagebox.showinfo(
+                "Thành công", 
+                f"Đã generate {len(generated_files)} file thành công tại:\n{OUTPUT_DIR}\n\n{file_list}"
+            )
         except Exception as e:
-            messagebox.showerror("Lỗi Generate", f"Lỗi trong quá trình generate: {e}")
+            messagebox.showerror("Lỗi Generate", f"Lỗi trong quá trình generate:\n{e}")
 
 if __name__ == "__main__":
     root = tk.Tk()
