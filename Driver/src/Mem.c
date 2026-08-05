@@ -1,4 +1,5 @@
 #include "Mem.h"
+#include "Mem_IPW.h"   /* Khai báo hàm tầng IPW */
 #include "SchM_Mem.h"
 #include <stdio.h>
 #include "Mem_IPW.h"
@@ -57,6 +58,7 @@ static uint8 Mem_ValidateAddressAndLength(Mem_InstanceIdType instanceId, Mem_Add
         batchStart = Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemStartAddress;
         batchSize  = Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemNumberOfSectors * 
                      Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemEraseSectorSize;
+
         batchEnd   = batchStart + batchSize;
         
         if ((address >= batchStart) && (address < batchEnd)) {

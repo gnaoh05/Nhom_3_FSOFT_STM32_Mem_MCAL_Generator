@@ -32,6 +32,9 @@ Std_ReturnType Mem_IPW_Read(Mem_InstanceIdType InstanceId,
                              Mem_AddressType Address, 
                              Mem_DataType* DataPtr, 
                              Mem_LengthType Length);
+=======
+#include "Mem_Types.h"
+>>>>>>> f5fe4abcfd1816984d77666f79bfa3f473be4962
 
 /**
  * @brief Đẩy lệnh ghi khối dữ liệu xuống phần cứng Flash
@@ -47,6 +50,7 @@ Std_ReturnType Mem_IPW_Write(Mem_InstanceIdType InstanceId,
 Std_ReturnType Mem_IPW_Erase(Mem_InstanceIdType InstanceId, 
                               Mem_AddressType Address, 
                               Mem_LengthType Length);
+
 
 /**
  * @brief Kiểm tra xem vùng nhớ Flash có hoàn toàn rỗng (0xFF) hay không
