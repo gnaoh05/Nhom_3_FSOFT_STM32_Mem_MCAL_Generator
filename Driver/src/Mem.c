@@ -1,8 +1,6 @@
 #include "Mem.h"
 #include "Mem_IPW.h"   /* Khai báo hàm tầng IPW */
 #include "SchM_Mem.h"
-#include <stdio.h>
-#include "Mem_IPW.h"
 
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
 #include "Det.h" /* Gắn module dò lỗi DET nếu cờ cấu hình bật */
@@ -122,13 +120,8 @@ void Mem_Init(const Mem_ConfigType* configPtr) {
     
     Mem_InitState = MEM_INIT; /* Mở khóa máy trạng thái toàn cục */
     
-    /* 
-     * TODO: Gọi API tầng IPW để cấu hình chân xung nhịp, Unlock Flash STM32 
-     * Lúc này, thay vì dùng configPtr, truyền địa chỉ biến cấu hình tự sinh Mem_ConfigData
-     * xuống cho tầng IPW. Ví dụ:
-     * 
-     * Mem_Ipw_Init(&Mem_ConfigData); 
-     */
+    /* Mở khóa và khởi tạo tầng phần cứng Flash_IP thông qua IPW */
+    Mem_Ipw_Init(&Mem_ConfigData); 
 }
 
 void Mem_DeInit(void) {
@@ -440,14 +433,15 @@ void Mem_MainFunction(void) {
 
         if (Mem_JobResults[i] == MEM_JOB_PENDING) {
             
+            Mem_Ipw_StatusType ipwStatus = Mem_Ipw_GetStatus(i);
+            
             /* Giao thức Handshake: Chỉ đẩy lệnh xuống khi phần cứng báo RẢNH (IDLE) */
-            if (Mem_Ipw_GetStatus(i) == MEM_IPW_IDLE) {
+            if (ipwStatus == MEM_IPW_IDLE) {
                 
                 /* Đã xử lý hết chiều dài yêu cầu -> Báo hoàn thành lên HĐH */
                 if (Mem_JobContext[i].RemainingLength == 0) {
                     Mem_JobResults[i] = MEM_JOB_OK;
                     Mem_JobContext[i].Action = MEM_JOB_ACTION_IDLE;
-                    printf("[CORE] TONG KET: Job %d DA HOAN THANH!\n", i);
                 } 
                 /* Vẫn còn chiều dài -> Cắt 1 chunk và đẩy xuống IPW */
                 else {
@@ -487,19 +481,16 @@ void Mem_MainFunction(void) {
                         /* Tiến địa chỉ lên và trừ đi số bytes còn lại */
                         Mem_JobContext[i].CurrentAddress += processLen;
                         Mem_JobContext[i].RemainingLength -= processLen;
-                        printf("[CORE] Da day thanh cong chunk %d bytes. Con phai xu ly %d bytes...\n\n", processLen, Mem_JobContext[i].RemainingLength);
                     } 
                     else {
                         /* Tầng IPW trả về E_NOT_OK */
                         if (Mem_JobContext[i].Action == MEM_JOB_ACTION_BLANKCHECK) {
                             /* Nếu là lệnh BlankCheck mà IPW báo E_NOT_OK -> Tức là vùng nhớ KHÔNG rỗng */
                             Mem_JobResults[i] = MEM_INCONSISTENT; 
-                            printf("[CORE] BLANKCHECK: Vung nho co chua du lieu (INCONSISTENT)!\n");
                         } 
                         else {
                             /* Các lệnh Read/Write/Erase bị từ chối -> Lỗi phần cứng thực sự */
                             Mem_JobResults[i] = MEM_JOB_FAILED;
-                            printf("[CORE] LOI: IPW tu choi lenh hoac phan cung loi. Job FAILED!\n");
                         }
                         
                         /* Reset Context Tracker do Job đã kết thúc sớm */
@@ -507,7 +498,16 @@ void Mem_MainFunction(void) {
                     }
                 }
             }
-            /* Còn nếu Mem_Ipw_GetStatus(i) == MEM_IPW_BUSY -> CORE KHÔNG LÀM GÌ CẢ (Chờ MainFunction chu kỳ sau) */
+            else if (ipwStatus == MEM_IPW_ERROR) {
+                /* Phần cứng báo lỗi (VD: Error, Inconsistent, Write Protect) trong lúc đang xử lý ngầm */
+                if (Mem_JobContext[i].Action == MEM_JOB_ACTION_BLANKCHECK) {
+                    Mem_JobResults[i] = MEM_INCONSISTENT;
+                } else {
+                    Mem_JobResults[i] = MEM_JOB_FAILED;
+                }
+                Mem_JobContext[i].Action = MEM_JOB_ACTION_IDLE; /* Hủy bỏ Job */
+            }
+            /* Còn nếu ipwStatus == MEM_IPW_BUSY -> CORE KHÔNG LÀM GÌ CẢ (Chờ MainFunction chu kỳ sau) */
         }
     }
 }
