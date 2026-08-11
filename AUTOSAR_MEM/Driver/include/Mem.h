@@ -21,38 +21,14 @@
  *  INCLUDE
  *====================================================================================================================*/
 #include "Std_Types.h"              /* Std_ReturnType, Std_VersionInfoType, NULL_PTR, TRUE/FALSE */
+#include "MemAcc_GeneralTypes.h"    /* MemAcc_AddressType, MemAcc_MemJobResultType                 */
 #include "Mem_Cfg.h"                /* cấu hình pre-compile (chapter 10)                         */
 
 /*======================================================================================================================
- *  TYPE THƯỜNG ĐƯỢC IMPORT TỪ MemAcc  [SWS_Mem_10020]
- *  Dự án này không dùng Memory Access Module (MemAcc) riêng, nên hai type mà
- *  AUTOSAR_CP_SWS_MemoryDriver yêu cầu import từ MemAcc_GeneralTypes.h được định nghĩa trực tiếp tại đây.
- *  Nếu sau này có MemAcc, thay block này bằng "#include MemAcc_GeneralTypes.h" và xóa các định nghĩa để
- *  tránh trùng type.
+ *  TYPE IMPORT TỪ MemAcc  [SWS_Mem_10020]
+ *  Integration test dùng Test/Stub/MemAcc/MemAcc_GeneralTypes.h. Khi tích hợp vào
+ *  AUTOSAR stack hoàn chỉnh, include path sẽ trỏ tới header do MemAcc thực cung cấp.
  *====================================================================================================================*/
-
-/* MemAcc_AddressType: type địa chỉ vật lý. Độ rộng phụ thuộc yêu cầu địa chỉ 64-Bit,
- * xem [SRS_MemHwAb_14046] / [SWS_Mem_00036] / [SWS_Mem_00037]. STM32F401RE chỉ cần địa chỉ 32-Bit. */
-#ifndef MEMACC_ADDRESS_64BIT
-#define MEMACC_ADDRESS_64BIT STD_OFF
-#endif
-
-#if (MEMACC_ADDRESS_64BIT == STD_ON)
-typedef uint64 MemAcc_AddressType;
-#else
-typedef uint32 MemAcc_AddressType;
-#endif
-
-/* MemAcc_MemJobResultType: giá trị kết quả job dùng bởi Mem_GetJobResult(), xem chapter 7.2.1/7.2.1.1. */
-typedef enum
-{
-    MEM_JOB_OK = 0,             /* [SWS_Mem_00067]: job hoàn tất thành công                                      */
-    MEM_JOB_PENDING,            /* [SWS_Mem_00030]: job đã chấp nhận, đang xử lý                                  */
-    MEM_JOB_FAILED,             /* [SWS_Mem_00031]: pending job không thể hoàn tất                                */
-    MEM_INCONSISTENT,           /* [SWS_Mem_00076]: job hoàn tất nhưng kết quả không như kỳ vọng (BlankCheck)     */
-    MEM_ECC_CORRECTED,          /* [SWS_Mem_00077]: job hoàn tất, gặp lỗi ECC có thể sửa                          */
-    MEM_ECC_UNCORRECTED         /* [SWS_Mem_00063][SWS_Mem_00078][SWS_Mem_00061]: lỗi ECC không thể sửa          */
-} MemAcc_MemJobResultType;
 
 /*======================================================================================================================
  *  NHẬN DẠNG MODULE / VENDOR  [SWS_Mem_00074] / SWS_BSW_00101..00103, SWS_BSW_00171

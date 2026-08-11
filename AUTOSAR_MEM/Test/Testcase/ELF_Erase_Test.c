@@ -71,7 +71,8 @@ static void ELF_ERASE_002(void)
 
     retVal = Mem_Erase(TEST_FLASH_INSTANCE,
                        TEST_FLASH_WRITE_ADDRESS,
-                       TEST_FLASH_SECTOR_LENGTH);
+                       (Mem_LengthType)(TEST_FLASH_SECTOR_LENGTH -
+                                        (TEST_FLASH_WRITE_ADDRESS - TEST_FLASH_SECTOR_ADDRESS)));
 
     TestManager_RecordCaseTrace(0x0602u, "EraseRejectsMisalignedRequest",
                                 "SWS_Mem_10014,SWS_Mem_00016,SWS_Mem_00035",
