@@ -1,4 +1,0 @@
-../Test/Stub/Det/det.c:22:16:Det_ReportError	1
-../Test/Stub/Det/det.c:39:6:Det_ResetLastError	1
-../Test/Stub/Det/det.c:48:19:Det_GetLastError	1
-../Test/Stub/Det/det.c:61:9:Det_HasError	1

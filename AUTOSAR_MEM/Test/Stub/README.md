@@ -5,7 +5,7 @@ Memory Driver khi project chưa có đầy đủ AUTOSAR BSW stack.
 
 | Stub | Vai trò trong integration test |
 | --- | --- |
-| `std/Std_Types.h` | Thay thế module kiểu dữ liệu chuẩn AUTOSAR. |
+| `std/Platform_Types.h`, `std/Std_Types.h` | Thay thế các module kiểu dữ liệu nền tảng và chuẩn AUTOSAR. |
 | `Det/det.h`, `Det/det.c` | Ghi nhận development error gần nhất để testcase kiểm tra. |
 | `MemAcc/MemAcc_GeneralTypes.h` | Cung cấp các type mà `Mem` bắt buộc import từ MemAcc. |
 | `SchM/SchM_Mem.h` | Cung cấp interface scheduled function của Mem cho scheduler. |
