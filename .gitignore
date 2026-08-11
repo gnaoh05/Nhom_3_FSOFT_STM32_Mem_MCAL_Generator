@@ -1,0 +1,23 @@
+# 1. Thư mục và file Build (Kết quả biên dịch)
+build/
+Build/
+*.elf
+*.hex
+*.bin
+*.o
+*.d
+*.su
+
+# 2. File cấu hình môi trường VS Code
+.vscode/
+
+# 3. File cấu hình IDE (STM32CubeIDE / Eclipse nếu không muốn đẩy)
+.project
+.cproject
+.settings/
+.mxproject
+
+# 4. File rác của hệ điều hành
+.DS_Store
+Thumbs.db
+desktop.ini
