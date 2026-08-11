@@ -27,6 +27,5 @@ desktop.ini
 __pycache__/
 *.py[cod]
 
-# 6. Metadata/code-generation entry point của CubeMX không dùng trong kiến trúc bare-metal
+# 6. Metadata tạm của CubeMX; file .ioc của board vẫn được quản lý bằng Git
 .mxproject
-*.ioc
