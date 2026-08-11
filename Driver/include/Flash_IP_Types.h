@@ -2,6 +2,7 @@
 #define FLASH_IP_TYPES_H
 
 #include "Std_Types.h"
+
 /* Định nghĩa trạng thái hoạt động thuần túy phần cứng */
 typedef enum 
 {
@@ -13,10 +14,11 @@ typedef enum
 typedef enum 
 {
     FLASH_IP_JOB_OK = 0U,
-    FLASH_IP_JOB_BUSY,             /* <-- Bổ sung dòng này */
-    FLASH_IP_JOB_FAILED,
-    FLASH_IP_WRITE_PROTECT_ERROR,
-    FLASH_IP_ALIGNMENT_ERROR
+    FLASH_IP_JOB_BUSY,             /* Trạng thái đang xử lý */
+    FLASH_IP_JOB_FAILED,           /* Lỗi chung */
+    FLASH_IP_INCONSISTENT,         /* Bổ sung: Lỗi Blank Check dữ liệu không nhất quán */
+    FLASH_IP_WRITE_PROTECT_ERROR,  /* Lỗi bảo vệ ghi */
+    FLASH_IP_ALIGNMENT_ERROR       /* Lỗi căn chỉnh địa chỉ/dữ liệu */
 } Flash_IP_JobResultType;
 
 #endif /* FLASH_IP_TYPES_H */
