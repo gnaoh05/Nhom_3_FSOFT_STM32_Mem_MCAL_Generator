@@ -1,15 +1,24 @@
 #include "Mem_IPW.h"
 #include "Flash_IP.h"
 
+#define MEM_IPW_TIMEOUT_TICKS (50000U) /* Số chu kỳ gọi MainFunction tối đa chờ phần cứng */
+static uint32 Mem_Ipw_TimeoutCounters[MEM_MAX_INSTANCES];
+
 /**
  * @brief Khởi tạo phần cứng Flash và Mở khóa thanh ghi CR
  */
 void Mem_Ipw_Init(const Mem_ConfigType* ConfigPtr) 
 {
+    uint8 i;
     (void)ConfigPtr; /* Trong cấu hình Pre-Compile, tham số này là NULL */
     
     Flash_IP_Init();
     Flash_IP_Unlock();
+
+    for (i = 0; i < MEM_MAX_INSTANCES; i++) 
+    {
+        Mem_Ipw_TimeoutCounters[i] = 0U;
+    }
 }
 
 /**
@@ -17,10 +26,14 @@ void Mem_Ipw_Init(const Mem_ConfigType* ConfigPtr)
  */
 Mem_Ipw_StatusType Mem_Ipw_GetStatus(Mem_InstanceIdType InstanceId) 
 {
-    (void)InstanceId;
-    
     Flash_IP_JobResultType hwStatus = Flash_IP_GetStatus();
     
+    /* Báo lỗi nếu phần cứng treo quá lâu (Timeout) */
+    if (Mem_Ipw_TimeoutCounters[InstanceId] >= MEM_IPW_TIMEOUT_TICKS) 
+    {
+        return MEM_IPW_ERROR;
+    }
+
     if (hwStatus == FLASH_IP_JOB_BUSY) 
     {
         return MEM_IPW_BUSY;
@@ -138,6 +151,19 @@ void Mem_Ipw_Cancel(Mem_InstanceIdType InstanceId)
  */
 void Mem_Ipw_MainFunction(Mem_InstanceIdType InstanceId) 
 {
-    (void)InstanceId;
-    /* Dành cho mở rộng các tác vụ quét phần cứng theo chu kỳ nếu cần */
+    Flash_IP_JobResultType hwStatus = Flash_IP_GetStatus();
+
+    /* Nếu phần cứng đang bận xử lý (Ghi/Xóa), ta tăng biến đếm thời gian Timeout */
+    if (hwStatus == FLASH_IP_JOB_BUSY) 
+    {
+        if (Mem_Ipw_TimeoutCounters[InstanceId] < MEM_IPW_TIMEOUT_TICKS) 
+        {
+            Mem_Ipw_TimeoutCounters[InstanceId]++;
+        }
+    }
+    else
+    {
+        /* Khi phần cứng rảnh rỗi hoặc xong việc, lập tức reset biến đếm */
+        Mem_Ipw_TimeoutCounters[InstanceId] = 0U;
+    }
 }
