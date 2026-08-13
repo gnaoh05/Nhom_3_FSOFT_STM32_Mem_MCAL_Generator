@@ -53,19 +53,19 @@ void Flash_IP_Init(void)
 {
     uint32 acrTemp = FLASH_REG->ACR;
     
-    /* 1. Cập nhật Wait States (Latency) vào thanh ghi hardware NGAY LẬP TỨC */
+    /* Cập nhật Wait States (Latency) vào thanh ghi hardware NGAY LẬP TỨC */
     acrTemp &= ~0x07U; /* Clear bits 0..2 (LATENCY) */
     acrTemp |= ((uint32)FLASH_IP_LATENCY_SETTING & 0x07U);
     FLASH_REG->ACR = acrTemp; /* Ghi ngay để bảo vệ CPU khi chạy clock cao */
 
-    /* 2. Reset I-Cache (bit 11) & D-Cache (bit 12) để xoá dữ liệu cũ */
+    /* Reset I-Cache (bit 11) & D-Cache (bit 12) để xoá dữ liệu cũ */
     FLASH_REG->ACR |= (1U << 11) | (1U << 12); 
     FLASH_REG->ACR &= ~((1U << 11) | (1U << 12)); 
 
-    /* 3. Bật Prefetch Buffer (bit 8), I-Cache (bit 9), D-Cache (bit 10) */
+    /* Bật Prefetch Buffer (bit 8), I-Cache (bit 9), D-Cache (bit 10) */
     FLASH_REG->ACR |= (1U << 8) | (1U << 9) | (1U << 10);
     
-    /* 4. Đánh dấu trạng thái Driver đã khởi tạo */
+    /* Đánh dấu trạng thái Driver đã khởi tạo */
     Flash_IP_DriverState = FLASH_IP_INITIALIZED;
 }
 
@@ -117,7 +117,7 @@ Flash_IP_JobResultType Flash_IP_GetStatus(void)
     {
         FLASH_REG->SR = FLASH_SR_EOP;
 
-        /* 2.3: Flush D-Cache & I-Cache sau khi ghi/xóa thành công */
+        /* Flush D-Cache & I-Cache sau khi ghi/xóa thành công */
         FLASH_REG->ACR |= (1U << 11) | (1U << 12); 
         FLASH_REG->ACR &= ~((1U << 11) | (1U << 12)); 
     }
@@ -137,7 +137,7 @@ Flash_IP_JobResultType Flash_IP_Erase(uint8 sectorNum)
         return FLASH_IP_JOB_BUSY;
     }
 
-    /* 2.2: Clear cờ lỗi cũ treo ở SR trước khi thực thi lệnh Erase mới */
+    /* Clear cờ lỗi cũ treo ở SR trước khi thực thi lệnh Erase mới */
     FLASH_REG->SR = FLASH_SR_ALL_ERRORS;
 
     /* Nạp Sector và cấu hình SER */
@@ -169,7 +169,7 @@ Flash_IP_JobResultType Flash_IP_Write(uint32 address, const uint8 *sourcePtr, ui
         return FLASH_IP_JOB_BUSY;
     }
 
-    /* 2.2: Clear cờ lỗi cũ trước khi thực thi lệnh Write */
+    /* Clear cờ lỗi cũ trước khi thực thi lệnh Write */
     FLASH_REG->SR = FLASH_SR_ALL_ERRORS;
 
     /* Bật PSIZE x32 và cờ PG */
@@ -178,7 +178,7 @@ Flash_IP_JobResultType Flash_IP_Write(uint32 address, const uint8 *sourcePtr, ui
     crReg |= FLASH_CR_PSIZE_X32 | FLASH_CR_PG;
     FLASH_REG->CR = crReg;
 
-    /* 2.1: Bất đồng bộ hóa - Chỉ ghi 1 Word (4 bytes) đầu tiên trong Chunk.
+    /* Bất đồng bộ hóa - Chỉ ghi 1 Word (4 bytes) đầu tiên trong Chunk.
        Tầng MemAcc/Mem sẽ chịu trách nhiệm gọi lặp theo từng Chunk 4-byte */
     const uint32 *srcWordPtr = (const uint32 *)(const void *)sourcePtr;
     *(__IO_UINT32*)address = srcWordPtr[0];
@@ -186,25 +186,50 @@ Flash_IP_JobResultType Flash_IP_Write(uint32 address, const uint8 *sourcePtr, ui
     return FLASH_IP_JOB_BUSY;
 }
 
-Flash_IP_JobResultType Flash_IP_Read(uint32 address, uint8 *targetPtr, uint32 length) 
+Flash_IP_JobResultType Flash_IP_Read(uint32_t address, uint8_t *targetPtr, uint32_t length) 
 {
+    /* Kiểm tra trạng thái và con trỏ đầu vào */
     if ((Flash_IP_DriverState == FLASH_IP_UNINITIALIZED) || (targetPtr == NULL_PTR)) 
     {
         return FLASH_IP_JOB_FAILED;
     }
 
+    /* Kiểm tra cờ BSY của Flash */
     if ((FLASH_REG->SR & FLASH_SR_BSY) != 0U) 
     {
         return FLASH_IP_JOB_BUSY;
     }
 
-    for (uint32 i = 0U; i < length; i++) 
+    /* Tính toán số khối 32-bit và số byte lẻ còn lại */
+    uint32_t wordsCount = length / 4U;
+    uint32_t remainderBytes = length % 4U;
+
+    uint32_t *targetPtr32 = (uint32_t *)(void *)targetPtr;
+    uint32_t currentAddr = address;
+
+    /* Phần bit chẵn: Đọc nhanh khối 32-bit bằng __IO_UINT32 */
+    for (uint32_t i = 0U; i < wordsCount; i++) 
     {
-        targetPtr[i] = *(__IO_UINT8*)(address + i);
+        /* Ép kiểu sang __IO_UINT32* để buộc CPU phát lệnh đọc 32-bit (LDR) */
+        targetPtr32[i] = *(__IO_UINT32 *)currentAddr;
+        currentAddr += 4U;
+    }
+
+    /* Phần bit lẻ dư: Đọc các byte lẻ còn lại bằng __IO_UINT8 */
+    if (remainderBytes > 0U)
+    {
+        uint8_t *targetPtr8 = &targetPtr[wordsCount * 4U];
+
+        for (uint32_t j = 0U; j < remainderBytes; j++) 
+        {
+            /* Ép kiểu sang __IO_UINT8* để đọc từng byte lẻ (LDRB) */
+            targetPtr8[j] = *(__IO_UINT8 *)(currentAddr + j);
+        }
     }
 
     return FLASH_IP_JOB_OK;
 }
+
 
 Flash_IP_JobResultType Flash_IP_BlankCheck(uint32 address, uint32 length)
 {
@@ -222,7 +247,7 @@ Flash_IP_JobResultType Flash_IP_BlankCheck(uint32 address, uint32 length)
     {
         if (*(__IO_UINT8*)(address + i) != 0xFFU) 
         {
-            /* 2.5: Trả về MEM_INCONSISTENT theo [SWS_Mem_00076] khi phát hiện ô nhớ không rỗng */
+            /* Trả về MEM_INCONSISTENT theo [SWS_Mem_00076] khi phát hiện ô nhớ không rỗng */
             return FLASH_IP_INCONSISTENT; 
         }
     }
