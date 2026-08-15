@@ -1,77 +1,567 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<AUTOSAR_EPD version="4.4.0">
-    <!-- Định nghĩa Module Memory Driver cho vi điều khiển STM32F401RE -->
-    <Module name="MemDriver" vendor="FSoft_Automotive_Team" target="STM32F401RE">
-        
-        <!-- ========================================================== -->
-        <!-- CONTAINER 1: FLASH_IP_CONFIG (Cấu hình phần cứng Flash IP) -->
-        <!-- Yêu cầu từ bạn tầng IP                                     -->
-        <!-- ========================================================== -->
-        <Container name="FlashIPConfig" description="Flash IP Hardware Configuration (ACR Register)">
-            <Parameter name="FlashLatency" type="ENUM" default="2"
-                       options="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
-                       description="Số Wait State (0-15 WS) phù hợp xung nhịp CPU"/>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_4-4-0.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="ECUC:fsoft-mem-driver-pkg-0001">
+      <SHORT-NAME>FSoft_Mem_STM32F401RE</SHORT-NAME>
+      <ELEMENTS>
+        <!-- ============================================================ -->
+        <!-- ECUC Definition Collection                                    -->
+        <!-- ============================================================ -->
+        <ECUC-DEFINITION-COLLECTION UUID="ECUC:fsoft-mem-def-collection-0001">
+          <SHORT-NAME>Mem_EcuParameterDefinition</SHORT-NAME>
+          <MODULE-REFS>
+            <MODULE-REF DEST="ECUC-MODULE-DEF">/FSoft_Mem_STM32F401RE/Mem</MODULE-REF>
+          </MODULE-REFS>
+        </ECUC-DEFINITION-COLLECTION>
 
-            <Parameter name="FlashPrefetchEnable" type="BOOLEAN" default="true"
-                       description="Bật/Tắt Prefetch Buffer (FLASH_ACR_PRFTEN)"/>
+        <!-- ============================================================ -->
+        <!-- ECUC Module Definition: Mem                                   -->
+        <!-- ============================================================ -->
+        <ECUC-MODULE-DEF UUID="ECUC:fsoft-mem-module-def-0001">
+          <SHORT-NAME>Mem</SHORT-NAME>
+          <DESC>
+            <L-2 L="EN">Configuration of the Mem (Memory Driver) module for STM32F401RE.</L-2>
+          </DESC>
+          <ADMIN-DATA>
+            <DOC-REVISIONS>
+              <DOC-REVISION>
+                <REVISION-LABEL>1.0.0</REVISION-LABEL>
+                <ISSUED-BY>FSoft_Automotive_Team</ISSUED-BY>
+                <DATE>2025-08-15</DATE>
+              </DOC-REVISION>
+            </DOC-REVISIONS>
+          </ADMIN-DATA>
+          <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+          <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+          <REFINED-MODULE-DEF-REF DEST="ECUC-MODULE-DEF">/AUTOSAR/EcucDefs/Mem</REFINED-MODULE-DEF-REF>
+          <SUPPORTED-CONFIG-VARIANTS>
+            <SUPPORTED-CONFIG-VARIANT>VARIANT-PRE-COMPILE</SUPPORTED-CONFIG-VARIANT>
+          </SUPPORTED-CONFIG-VARIANTS>
 
-            <Parameter name="FlashICacheEnable" type="BOOLEAN" default="true"
-                       description="Bật/Tắt Instruction Cache (FLASH_ACR_ICEN)"/>
+          <CONTAINERS>
+            <!-- ======================================================== -->
+            <!-- CONTAINER: MemGeneral                                     -->
+            <!-- General configuration parameters for the Mem driver.      -->
+            <!-- ======================================================== -->
+            <ECUC-PARAM-CONF-CONTAINER-DEF UUID="ECUC:fsoft-mem-general-0001">
+              <SHORT-NAME>MemGeneral</SHORT-NAME>
+              <DESC>
+                <L-2 L="EN">Container for general configuration parameters of the Mem driver. These parameters are always pre-compile.</L-2>
+              </DESC>
+              <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+              <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+              <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+              <PARAMETERS>
 
-            <Parameter name="FlashDCacheEnable" type="BOOLEAN" default="true"
-                       description="Bật/Tắt Data Cache (FLASH_ACR_DCEN)"/>
+                <!-- MemDevErrorDetect -->
+                <ECUC-BOOLEAN-PARAM-DEF UUID="ECUC:fsoft-mem-dev-error-detect-0001">
+                  <SHORT-NAME>MemDevErrorDetect</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Switches the Development Error Detection and Notification ON or OFF.</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>AUTOSAR_ECUC</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>true</DEFAULT-VALUE>
+                </ECUC-BOOLEAN-PARAM-DEF>
 
-            <Parameter name="FlashTimeoutValue" type="HEX" default="0x000FFFFF"
-                       description="Thời gian chờ (Timeout loops) tránh treo MCU"/>
+                <!-- MemMainFunctionPeriod -->
+                <ECUC-FLOAT-PARAM-DEF UUID="ECUC:fsoft-mem-main-func-period-0001">
+                  <SHORT-NAME>MemMainFunctionPeriod</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Cycle time of the Mem_MainFunction in seconds. Determines how often the main processing function is called.</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>AUTOSAR_ECUC</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>0.005</DEFAULT-VALUE>
+                  <MAX>1.0</MAX>
+                  <MIN>0.0</MIN>
+                </ECUC-FLOAT-PARAM-DEF>
 
-            <Parameter name="FlashPSize" type="ENUM" default="PSIZE_x32"
-                       options="PSIZE_x8,PSIZE_x16,PSIZE_x32,PSIZE_x64"
-                       description="Kích thước song song khi nạp (x8, x16, x32, x64)"/>
+              </PARAMETERS>
+            </ECUC-PARAM-CONF-CONTAINER-DEF>
 
-            <Parameter name="FlashBaseAddr" type="HEX" default="0x40023C00"
-                       description="Địa chỉ cơ sở thanh ghi Flash Controller (chip-specific)"/>
-        </Container>
+            <!-- ======================================================== -->
+            <!-- CONTAINER: MemInstance                                     -->
+            <!-- Configuration for a specific Memory driver instance.       -->
+            <!-- ======================================================== -->
+            <ECUC-PARAM-CONF-CONTAINER-DEF UUID="ECUC:fsoft-mem-instance-0001">
+              <SHORT-NAME>MemInstance</SHORT-NAME>
+              <DESC>
+                <L-2 L="EN">Container for instance-specific configuration of the Mem driver. One MemInstance per physical memory device.</L-2>
+              </DESC>
+              <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+              <UPPER-MULTIPLICITY>65535</UPPER-MULTIPLICITY>
+              <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+              <PARAMETERS>
 
-        <!-- ========================================================== -->
-        <!-- CONTAINER 2: MEM_GENERAL (Cấu hình tầng Mem AUTOSAR)       -->
-        <!-- Yêu cầu từ bạn tầng Mem Core                               -->
-        <!-- ========================================================== -->
-        <Container name="MemGeneral" description="Mem AUTOSAR Configuration Parameters for Mem_Cfg.h">
-            <!-- Bật/tắt phát hiện lỗi trong quá trình phát triển (DET) -->
-            <Parameter name="MemDevErrorDetect" type="BOOLEAN" default="true"
-                       description="Switches Development Error Detection ON or OFF"/>
+                <!-- MemInstanceId -->
+                <ECUC-INTEGER-PARAM-DEF UUID="ECUC:fsoft-mem-instance-id-0001">
+                  <SHORT-NAME>MemInstanceId</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Unique numeric identifier for this Mem driver instance.</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>AUTOSAR_ECUC</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>true</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>0</DEFAULT-VALUE>
+                  <MAX>65535</MAX>
+                  <MIN>0</MIN>
+                </ECUC-INTEGER-PARAM-DEF>
 
-            <!-- Số lượng instance Flash (STM32F401RE chỉ có 1 Flash nội) -->
-            <Parameter name="MemMaxInstances" type="INTEGER" min="1" max="255" default="1"
-                       description="Số lượng Flash instance (STM32F401RE = 1)"/>
+                <!-- MemBaseAddress -->
+                <ECUC-INTEGER-PARAM-DEF UUID="ECUC:fsoft-mem-base-address-0001">
+                  <SHORT-NAME>MemBaseAddress</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Base address of the memory device for this instance (chip-specific). For STM32F401RE internal Flash: 0x08000000.</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>FSoft</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>134217728</DEFAULT-VALUE>
+                  <MAX>4294967295</MAX>
+                  <MIN>0</MIN>
+                </ECUC-INTEGER-PARAM-DEF>
 
-            <!-- Index của module Mem -->
-            <Parameter name="MemIndex" type="INTEGER" min="0" max="255" default="0"
-                       description="Index của module Mem"/>
+                <!-- MemTotalSize -->
+                <ECUC-INTEGER-PARAM-DEF UUID="ECUC:fsoft-mem-total-size-0001">
+                  <SHORT-NAME>MemTotalSize</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Total size of the memory in KB for this instance. For STM32F401RE: 512 KB.</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>FSoft</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>512</DEFAULT-VALUE>
+                  <MAX>4294967295</MAX>
+                  <MIN>1</MIN>
+                </ECUC-INTEGER-PARAM-DEF>
 
-            <!-- Giá trị khi xóa Flash (STM32 = 0xFF) -->
-            <Parameter name="MemErasedValue" type="HEX" default="0xFF"
-                       description="Giá trị khi xóa Flash STM32 (0xFF)"/>
-        </Container>
+              </PARAMETERS>
 
-        <!-- ========================================================== -->
-        <!-- CONTAINER 3: MEM_INSTANCE (Cấu hình Sector vật lý)         -->
-        <!-- Dùng chung cho cả Mem_Cfg.c                                 -->
-        <!-- ========================================================== -->
-        <Container name="MemInstance" description="Physical Flash Sector Configuration">
-            <!-- Danh sách Sector thực tế của STM32F401RE (RM0368) -->
-            <!-- Tool CodeGen sẽ nhóm các sector cùng kích thước để sinh Sector Batch -->
-            <List name="MemSectorBatch" description="Danh sách các Sector vật lý của Flash STM32F401RE">
-                <Item id="0" name="SECTOR_0" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x08000000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
-                <Item id="1" name="SECTOR_1" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x08004000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
-                <Item id="2" name="SECTOR_2" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x08008000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
-                <Item id="3" name="SECTOR_3" MemNumberOfSectors="1" MemEraseSectorSize="16384"  MemStartAddress="0x0800C000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
-                <Item id="4" name="SECTOR_4" MemNumberOfSectors="1" MemEraseSectorSize="65536"  MemStartAddress="0x08010000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
-                <Item id="5" name="SECTOR_5" MemNumberOfSectors="1" MemEraseSectorSize="131072" MemStartAddress="0x08020000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
-                <Item id="6" name="SECTOR_6" MemNumberOfSectors="1" MemEraseSectorSize="131072" MemStartAddress="0x08040000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
-                <Item id="7" name="SECTOR_7" MemNumberOfSectors="1" MemEraseSectorSize="131072" MemStartAddress="0x08060000" MemMinReadSize="1" MemWritePageSize="1" MemSpecifiedEraseCycles="10000"/>
-            </List>
-        </Container>
+              <!-- ======================================================== -->
+              <!-- SUB-CONTAINER: MemSectorBatch                             -->
+              <!-- Configuration of memory sector batches within instance.   -->
+              <!-- ======================================================== -->
+              <SUB-CONTAINERS>
+                <ECUC-PARAM-CONF-CONTAINER-DEF UUID="ECUC:fsoft-mem-sector-batch-0001">
+                  <SHORT-NAME>MemSectorBatch</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Configuration of a sector batch. A sector batch groups contiguous sectors of the same size. Multiplicity: 1 or more per MemInstance.</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY-INFINITE>1</UPPER-MULTIPLICITY-INFINITE>
+                  <MULTIPLICITY-CONFIG-CLASSES>
+                    <ECUC-MULTIPLICITY-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-MULTIPLICITY-CONFIGURATION-CLASS>
+                  </MULTIPLICITY-CONFIG-CLASSES>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <PARAMETERS>
 
-    </Module>
-</AUTOSAR_EPD>
+                    <!-- MemNumberOfSectors -->
+                    <ECUC-INTEGER-PARAM-DEF UUID="ECUC:fsoft-mem-num-sectors-0001">
+                      <SHORT-NAME>MemNumberOfSectors</SHORT-NAME>
+                      <DESC>
+                        <L-2 L="EN">Number of contiguous sectors of the same size in this batch.</L-2>
+                      </DESC>
+                      <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                      <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                      <SCOPE>LOCAL</SCOPE>
+                      <ORIGIN>AUTOSAR_ECUC</ORIGIN>
+                      <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                      <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                      <VALUE-CONFIG-CLASSES>
+                        <ECUC-VALUE-CONFIGURATION-CLASS>
+                          <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                          <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                        </ECUC-VALUE-CONFIGURATION-CLASS>
+                      </VALUE-CONFIG-CLASSES>
+                      <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                      <DEFAULT-VALUE>1</DEFAULT-VALUE>
+                      <MAX>65535</MAX>
+                      <MIN>1</MIN>
+                    </ECUC-INTEGER-PARAM-DEF>
+
+                    <!-- MemEraseSectorSize -->
+                    <ECUC-INTEGER-PARAM-DEF UUID="ECUC:fsoft-mem-erase-sector-size-0001">
+                      <SHORT-NAME>MemEraseSectorSize</SHORT-NAME>
+                      <DESC>
+                        <L-2 L="EN">Size of a single erase sector in bytes.</L-2>
+                      </DESC>
+                      <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                      <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                      <SCOPE>LOCAL</SCOPE>
+                      <ORIGIN>AUTOSAR_ECUC</ORIGIN>
+                      <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                      <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                      <VALUE-CONFIG-CLASSES>
+                        <ECUC-VALUE-CONFIGURATION-CLASS>
+                          <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                          <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                        </ECUC-VALUE-CONFIGURATION-CLASS>
+                      </VALUE-CONFIG-CLASSES>
+                      <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                      <DEFAULT-VALUE>16384</DEFAULT-VALUE>
+                      <MAX>4294967295</MAX>
+                      <MIN>1</MIN>
+                    </ECUC-INTEGER-PARAM-DEF>
+
+                    <!-- MemStartAddress -->
+                    <ECUC-INTEGER-PARAM-DEF UUID="ECUC:fsoft-mem-start-address-0001">
+                      <SHORT-NAME>MemStartAddress</SHORT-NAME>
+                      <DESC>
+                        <L-2 L="EN">Physical start address of the first sector in this batch.</L-2>
+                      </DESC>
+                      <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                      <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                      <SCOPE>LOCAL</SCOPE>
+                      <ORIGIN>AUTOSAR_ECUC</ORIGIN>
+                      <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                      <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                      <VALUE-CONFIG-CLASSES>
+                        <ECUC-VALUE-CONFIGURATION-CLASS>
+                          <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                          <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                        </ECUC-VALUE-CONFIGURATION-CLASS>
+                      </VALUE-CONFIG-CLASSES>
+                      <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                      <DEFAULT-VALUE>134217728</DEFAULT-VALUE>
+                      <MAX>4294967295</MAX>
+                      <MIN>0</MIN>
+                    </ECUC-INTEGER-PARAM-DEF>
+
+                    <!-- MemMinReadSize -->
+                    <ECUC-INTEGER-PARAM-DEF UUID="ECUC:fsoft-mem-min-read-size-0001">
+                      <SHORT-NAME>MemMinReadSize</SHORT-NAME>
+                      <DESC>
+                        <L-2 L="EN">Minimum read size (alignment) in bytes for read operations on this sector batch.</L-2>
+                      </DESC>
+                      <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                      <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                      <SCOPE>LOCAL</SCOPE>
+                      <ORIGIN>AUTOSAR_ECUC</ORIGIN>
+                      <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                      <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                      <VALUE-CONFIG-CLASSES>
+                        <ECUC-VALUE-CONFIGURATION-CLASS>
+                          <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                          <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                        </ECUC-VALUE-CONFIGURATION-CLASS>
+                      </VALUE-CONFIG-CLASSES>
+                      <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                      <DEFAULT-VALUE>1</DEFAULT-VALUE>
+                      <MAX>4294967295</MAX>
+                      <MIN>1</MIN>
+                    </ECUC-INTEGER-PARAM-DEF>
+
+                    <!-- MemWritePageSize -->
+                    <ECUC-INTEGER-PARAM-DEF UUID="ECUC:fsoft-mem-write-page-size-0001">
+                      <SHORT-NAME>MemWritePageSize</SHORT-NAME>
+                      <DESC>
+                        <L-2 L="EN">Page size in bytes for write (program) operations on this sector batch.</L-2>
+                      </DESC>
+                      <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                      <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                      <SCOPE>LOCAL</SCOPE>
+                      <ORIGIN>AUTOSAR_ECUC</ORIGIN>
+                      <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                      <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                      <VALUE-CONFIG-CLASSES>
+                        <ECUC-VALUE-CONFIGURATION-CLASS>
+                          <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                          <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                        </ECUC-VALUE-CONFIGURATION-CLASS>
+                      </VALUE-CONFIG-CLASSES>
+                      <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                      <DEFAULT-VALUE>1</DEFAULT-VALUE>
+                      <MAX>4294967295</MAX>
+                      <MIN>1</MIN>
+                    </ECUC-INTEGER-PARAM-DEF>
+
+                    <!-- MemSpecifiedEraseCycles -->
+                    <ECUC-INTEGER-PARAM-DEF UUID="ECUC:fsoft-mem-erase-cycles-0001">
+                      <SHORT-NAME>MemSpecifiedEraseCycles</SHORT-NAME>
+                      <DESC>
+                        <L-2 L="EN">Number of specified erase cycles for this sector batch (from device datasheet). 0 means not specified.</L-2>
+                      </DESC>
+                      <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                      <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                      <SCOPE>LOCAL</SCOPE>
+                      <ORIGIN>AUTOSAR_ECUC</ORIGIN>
+                      <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                      <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                      <VALUE-CONFIG-CLASSES>
+                        <ECUC-VALUE-CONFIGURATION-CLASS>
+                          <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                          <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                        </ECUC-VALUE-CONFIGURATION-CLASS>
+                      </VALUE-CONFIG-CLASSES>
+                      <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                      <DEFAULT-VALUE>10000</DEFAULT-VALUE>
+                      <MAX>4294967295</MAX>
+                      <MIN>0</MIN>
+                    </ECUC-INTEGER-PARAM-DEF>
+
+                  </PARAMETERS>
+                </ECUC-PARAM-CONF-CONTAINER-DEF>
+              </SUB-CONTAINERS>
+            </ECUC-PARAM-CONF-CONTAINER-DEF>
+
+            <!-- ======================================================== -->
+            <!-- CONTAINER: FlashIPConfig (Vendor-specific)                 -->
+            <!-- Hardware configuration for Flash IP layer (ACR Register). -->
+            <!-- ======================================================== -->
+            <ECUC-PARAM-CONF-CONTAINER-DEF UUID="ECUC:fsoft-flash-ip-config-0001">
+              <SHORT-NAME>FlashIPConfig</SHORT-NAME>
+              <DESC>
+                <L-2 L="EN">Vendor-specific: Flash IP hardware configuration for STM32F401RE (ACR register settings, parallelism, timeout).</L-2>
+              </DESC>
+              <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+              <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+              <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+              <PARAMETERS>
+
+                <!-- FlashLatency -->
+                <ECUC-ENUMERATION-PARAM-DEF UUID="ECUC:fsoft-flash-latency-0001">
+                  <SHORT-NAME>FlashLatency</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Number of Wait States (0-15 WS) for Flash access, depends on CPU clock frequency.</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>FSoft</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>2</DEFAULT-VALUE>
+                  <LITERALS>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>0</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>1</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>2</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>3</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>4</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>5</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>6</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>7</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>8</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>9</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>10</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>11</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>12</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>13</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>14</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>15</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                  </LITERALS>
+                </ECUC-ENUMERATION-PARAM-DEF>
+
+                <!-- FlashPrefetchEnable -->
+                <ECUC-BOOLEAN-PARAM-DEF UUID="ECUC:fsoft-flash-prefetch-0001">
+                  <SHORT-NAME>FlashPrefetchEnable</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Enable/Disable Prefetch Buffer (FLASH_ACR_PRFTEN).</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>FSoft</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>true</DEFAULT-VALUE>
+                </ECUC-BOOLEAN-PARAM-DEF>
+
+                <!-- FlashICacheEnable -->
+                <ECUC-BOOLEAN-PARAM-DEF UUID="ECUC:fsoft-flash-icache-0001">
+                  <SHORT-NAME>FlashICacheEnable</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Enable/Disable Instruction Cache (FLASH_ACR_ICEN).</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>FSoft</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>true</DEFAULT-VALUE>
+                </ECUC-BOOLEAN-PARAM-DEF>
+
+                <!-- FlashDCacheEnable -->
+                <ECUC-BOOLEAN-PARAM-DEF UUID="ECUC:fsoft-flash-dcache-0001">
+                  <SHORT-NAME>FlashDCacheEnable</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Enable/Disable Data Cache (FLASH_ACR_DCEN).</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>FSoft</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>true</DEFAULT-VALUE>
+                </ECUC-BOOLEAN-PARAM-DEF>
+
+                <!-- FlashTimeoutValue -->
+                <ECUC-INTEGER-PARAM-DEF UUID="ECUC:fsoft-flash-timeout-0001">
+                  <SHORT-NAME>FlashTimeoutValue</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Timeout value (number of loop iterations) to prevent MCU hang during Flash operations.</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>FSoft</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>1048575</DEFAULT-VALUE>
+                  <MAX>4294967295</MAX>
+                  <MIN>0</MIN>
+                </ECUC-INTEGER-PARAM-DEF>
+
+                <!-- FlashPSize -->
+                <ECUC-ENUMERATION-PARAM-DEF UUID="ECUC:fsoft-flash-psize-0001">
+                  <SHORT-NAME>FlashPSize</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Parallelism size for Flash programming (x8, x16, x32, x64). Determines write alignment.</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>FSoft</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>PSIZE_x32</DEFAULT-VALUE>
+                  <LITERALS>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>PSIZE_x8</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>PSIZE_x16</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>PSIZE_x32</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                    <ECUC-ENUMERATION-LITERAL-DEF><SHORT-NAME>PSIZE_x64</SHORT-NAME><ORIGIN>FSoft</ORIGIN></ECUC-ENUMERATION-LITERAL-DEF>
+                  </LITERALS>
+                </ECUC-ENUMERATION-PARAM-DEF>
+
+                <!-- FlashBaseAddr -->
+                <ECUC-INTEGER-PARAM-DEF UUID="ECUC:fsoft-flash-base-addr-0001">
+                  <SHORT-NAME>FlashBaseAddr</SHORT-NAME>
+                  <DESC>
+                    <L-2 L="EN">Base address of the Flash controller registers (chip-specific). STM32F401RE: 0x40023C00.</L-2>
+                  </DESC>
+                  <LOWER-MULTIPLICITY>1</LOWER-MULTIPLICITY>
+                  <UPPER-MULTIPLICITY>1</UPPER-MULTIPLICITY>
+                  <SCOPE>LOCAL</SCOPE>
+                  <ORIGIN>FSoft</ORIGIN>
+                  <POST-BUILD-VARIANT-MULTIPLICITY>false</POST-BUILD-VARIANT-MULTIPLICITY>
+                  <POST-BUILD-VARIANT-VALUE>false</POST-BUILD-VARIANT-VALUE>
+                  <VALUE-CONFIG-CLASSES>
+                    <ECUC-VALUE-CONFIGURATION-CLASS>
+                      <CONFIG-CLASS>PRE-COMPILE</CONFIG-CLASS>
+                      <CONFIG-VARIANT>VARIANT-PRE-COMPILE</CONFIG-VARIANT>
+                    </ECUC-VALUE-CONFIGURATION-CLASS>
+                  </VALUE-CONFIG-CLASSES>
+                  <SYMBOLIC-NAME-VALUE>false</SYMBOLIC-NAME-VALUE>
+                  <DEFAULT-VALUE>1073759232</DEFAULT-VALUE>
+                  <MAX>4294967295</MAX>
+                  <MIN>0</MIN>
+                </ECUC-INTEGER-PARAM-DEF>
+
+              </PARAMETERS>
+            </ECUC-PARAM-CONF-CONTAINER-DEF>
+
+          </CONTAINERS>
+        </ECUC-MODULE-DEF>
+      </ELEMENTS>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>
