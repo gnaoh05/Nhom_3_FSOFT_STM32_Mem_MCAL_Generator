@@ -4,6 +4,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifndef TRUE
+#define TRUE                    ((boolean)1U)
+#endif
+
+#ifndef FALSE
+#define FALSE                   ((boolean)0U)
+#endif
+
 #ifndef STATUSTYPE_DEFINED
 #define STATUSTYPE_DEFINED
 #define E_OK                    ((Std_ReturnType)0x00U)

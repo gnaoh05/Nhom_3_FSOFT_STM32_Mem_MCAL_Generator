@@ -26,4 +26,5 @@
 #define FLASH_IP_TOTAL_SECTORS        (8U)
 #define FLASH_IP_WRITE_ALIGNMENT      (4U)
 
+extern const Flash_IP_ConfigType Flash_IP_Config;
 #endif /* FLASH_IP_CFG_H */
