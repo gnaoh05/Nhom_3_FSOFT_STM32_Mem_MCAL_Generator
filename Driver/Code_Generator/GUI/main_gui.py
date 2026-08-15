@@ -315,7 +315,12 @@ class MemConfiguratorApp:
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
         
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        frame_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        
+        def _configure_canvas(event):
+            canvas.itemconfig(frame_id, width=event.width)
+            
+        canvas.bind("<Configure>", _configure_canvas)
         canvas.configure(yscrollcommand=scrollbar.set)
         
         # Bind mouse wheel for scrolling
