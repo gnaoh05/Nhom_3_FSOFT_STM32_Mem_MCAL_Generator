@@ -4,16 +4,12 @@
 
 - Dự án: `AUTOSAR_MEM`
 - Target: `STM32F401RE`
-- Phong cách test: mức thanh ghi trên target, không dùng HAL flash service
 - Tài liệu tham chiếu:
   - `AUTOSAR_CP_SWS_MemoryDriver.pdf` (AUTOSAR CP R25-11, Doc ID 1018)
   - `Refenrence manual Stm32f401re.pdf`
 
 Tệp này theo dõi các Requirement được bộ test target STM32 trong `Test/Testcase` kiểm tra.
-Bộ test hướng đến các Requirement vừa:
-
-- được dự án này hiện thực, và
-- có thể kiểm tra có ý nghĩa tại runtime trên port Flash nội STM32F401 hiện tại.
+Bộ test hướng đến các Requirement có thể kiểm tra có ý nghĩa tại runtime trên port Flash nội STM32F401 hiện tại.
 
 Requirement chỉ liên quan cấu hình, chỉ compile-time, chỉ review hoặc không áp dụng cho công nghệ bộ nhớ này được liệt kê riêng.
 
