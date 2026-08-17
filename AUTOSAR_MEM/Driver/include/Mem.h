@@ -20,9 +20,8 @@
 /*======================================================================================================================
  *  INCLUDE
  *====================================================================================================================*/
-#include "Std_Types.h"              /* Std_ReturnType, Std_VersionInfoType, NULL_PTR, TRUE/FALSE */
-#include "MemAcc_GeneralTypes.h"    /* MemAcc_AddressType, MemAcc_MemJobResultType                 */
-#include "Mem_Cfg.h"                /* cấu hình pre-compile (chapter 10)                         */
+#include "Mem_Types.h"              /* public Mem types and imported MemAcc types                 */
+#include "Mem_Cfg.h"                /* cấu hình pre-compile (chapter 10)                          */
 
 /*======================================================================================================================
  *  TYPE IMPORT TỪ MemAcc  [SWS_Mem_10020]
@@ -33,8 +32,8 @@
 /*======================================================================================================================
  *  NHẬN DẠNG MODULE / VENDOR  [SWS_Mem_00074] / SWS_BSW_00101..00103, SWS_BSW_00171
  *====================================================================================================================*/
-#define MEM_MODULE_ID                       255u   /* ví dụ / phụ thuộc vendor */
-#define MEM_VENDOR_ID                       1u     /* ví dụ / phụ thuộc vendor */
+#define MEM_MODULE_ID                        91u
+#define MEM_VENDOR_ID                         1u
 
 #define MEM_AR_RELEASE_MAJOR_VERSION         25u
 #define MEM_AR_RELEASE_MINOR_VERSION         11u
@@ -79,33 +78,6 @@
 #ifndef E_MEM_SERVICE_NOT_AVAIL
 #define E_MEM_SERVICE_NOT_AVAIL             ((Std_ReturnType)2U)
 #endif
-
-/*======================================================================================================================
- *  8.2  ĐỊNH NGHĨA TYPE
- *====================================================================================================================*/
-
-/* [SWS_Mem_10002] Mem_AddressType: type địa chỉ thiết bị bộ nhớ vật lý, suy ra từ MemAcc_AddressType */
-typedef MemAcc_AddressType Mem_AddressType;
-
-/* [SWS_Mem_10000] Mem_ConfigType: type cấu trúc cấu hình postbuild.
- * Theo [SWS_Mem_00087], configPtr truyền vào Mem_Init() hiện chưa dùng và phải là NULL pointer; type vẫn
- * được khai báo để đáp ứng SRS_BSW_00414. */
-typedef struct
-{
-    uint8 Mem_ConfigType_Reserved; /* không dùng, chỉ giữ để đủ interface */
-} Mem_ConfigType;
-
-/* [SWS_Mem_10003] Mem_DataType: type dữ liệu cho user buffer read/write */
-typedef uint8 Mem_DataType;
-
-/* [SWS_Mem_10004] Mem_InstanceIdType: type Memory driver instance ID */
-typedef uint32 Mem_InstanceIdType;
-
-/* [SWS_Mem_10007] Mem_LengthType: type độ dài của thiết bị bộ nhớ vật lý */
-typedef uint32 Mem_LengthType;
-
-/* [SWS_Mem_10026] Mem_HwServiceIdType: type định danh yêu cầu hardware specific service */
-typedef uint32 Mem_HwServiceIdType;
 
 /*======================================================================================================================
  *  8.3.1  HÀM ĐỒNG BỘ

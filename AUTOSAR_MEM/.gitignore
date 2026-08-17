@@ -1,0 +1,6 @@
+/Build_ARM/
+/Debug/
+/Release/
+/HostTest/build/
+/**/__pycache__/
+*.pyc

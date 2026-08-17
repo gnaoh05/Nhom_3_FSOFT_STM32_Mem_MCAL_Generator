@@ -1,0 +1,9 @@
+{
+    "MemDevErrorDetect": "STD_ON",
+    "MemInstanceId": 6,
+    "MemStartAddress": "0x08000000",
+    "MemNumberOfSectors": 8,
+    "MemEraseSectorSize": 2048,
+    "MemWritePageSize": 8,
+    "MemMinReadSize": 1
+}

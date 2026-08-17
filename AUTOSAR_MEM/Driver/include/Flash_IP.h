@@ -10,17 +10,15 @@
  *                KHÔNG dùng CMSIS, ST HAL hoặc LL; địa chỉ thanh ghi và bit-mask được định nghĩa trực tiếp
  *                từ RM0368 trong Stm32F401_BareMetal.h.
  *
- *                Program/Erase được kích hoạt rồi hoàn tất bất đồng bộ qua FLASH global interrupt
- *                (EOPIE/ERRIE), phù hợp mô hình job bất đồng bộ của AUTOSAR Mem driver (Mem.c / Mem_IPW.c)
+ *                Program/Erase được kích hoạt rồi hoàn tất bằng polling trong Flash_IP_MainFunction().
+ *                Flash_IP_GetStatus() là truy vấn thuần và không xóa cờ phần cứng.
  *                ở lớp trên tệp này.
  *
  *  QUAN TRỌNG (giới hạn single Flash bank, RM0368 chapter 3.4):
  *                STM32F401 có một Flash bank và KHÔNG hỗ trợ Read-While-Write. Khi program/erase đang chạy
  *                (BSY=1), mọi truy cập CPU bus vào vùng địa chỉ Flash, kể cả instruction fetch, sẽ bị AHB
  *                bus matrix stall tự động cho đến khi thao tác hoàn tất. Vì vậy: mã chạy từ Flash sẽ có vẻ
- *                "đứng" trong thời gian thao tác (vài trăm us cho program một byte, đến khoảng 2 s trong
- *                trường hợp xóa sector 128 KB); FLASH_IRQHandler() chỉ chạy khi stall kết thúc, đúng lúc
- *                thao tác hoàn tất. Đây là hành vi mong đợi, không phải lỗi. Nếu ứng dụng không chấp nhận
+ *                "đứng" trong thời gian thao tác. Đây là hành vi mong đợi, không phải lỗi. Nếu ứng dụng không chấp nhận
  *                stall này, ví dụ hard real-time task, hãy chạy mã gọi và vector table từ RAM.
  *********************************************************************************************************************/
 
@@ -46,6 +44,7 @@ typedef enum
  *====================================================================================================================*/
 extern void Flash_IP_Init(void);
 extern void Flash_IP_DeInit(void);
+extern void Flash_IP_Cancel(void);
 
 /*======================================================================================================================
  *  Trạng thái
@@ -65,8 +64,7 @@ extern Std_ReturnType Flash_IP_ProgramStart(uint32 address, const uint8* data, u
 extern Std_ReturnType Flash_IP_EraseSectorStart(uint8 sectorNumber);
 
 /*======================================================================================================================
- *  Gọi tuần hoàn, ví dụ từ Mem_Ipw_MainFunction(). Dành cho giám sát watchdog/timeout trong tương lai;
- *  việc hoàn tất thực tế được FLASH_IRQHandler() phát hiện, không phải hàm này.
+ *  Gọi tuần hoàn từ Mem_Ipw_MainFunction(). Hàm này là nơi duy nhất đọc/xóa cờ hoàn tất hoặc lỗi.
  *====================================================================================================================*/
 extern void Flash_IP_MainFunction(void);
 
@@ -76,13 +74,5 @@ extern void Flash_IP_MainFunction(void);
 extern uint8  Flash_IP_GetSectorFromAddress(uint32 address); /* trả về 0xFFu nếu địa chỉ ngoài phạm vi */
 extern uint32 Flash_IP_GetSectorStartAddress(uint8 sectorNumber);
 extern uint32 Flash_IP_GetSectorSize(uint8 sectorNumber);
-
-/*======================================================================================================================
- *  FLASH global interrupt handler.
- *  GHI CHÚ: Dự án STM32CubeMX/HAL thường sinh FLASH_IRQHandler() rỗng trong stm32f4xx_it.c. Vì driver này
- *  là bare-metal, không có HAL, hãy xóa hoặc đổi tên mọi định nghĩa FLASH_IRQHandler() có sẵn ở nơi khác
- *  để hàm này là định nghĩa strong duy nhất được liên kết vào vector table.
- *====================================================================================================================*/
-extern void FLASH_IRQHandler(void);
 
 #endif /* FLASH_IP_H */

@@ -10,7 +10,7 @@
  *                tới Flash bank nội duy nhất của STM32F401RE.
  *
  *                Quản lý kết quả job:
- *                Flash_IP chỉ theo dõi trạng thái Program/Erase (thao tác bất đồng bộ qua interrupt).
+ *                Flash_IP chỉ theo dõi trạng thái Program/Erase (thao tác bất đồng bộ qua polling).
  *                Read và BlankCheck hoàn tất đồng bộ tại lớp này vì Flash memory-mapped, nên kết quả được
  *                tính và lưu cục bộ thay vì đọc từ Flash_IP_GetStatus(). Mem_Ipw_GetJobResult() chọn đúng
  *                nguồn theo loại thao tác được kích hoạt gần nhất.
@@ -118,6 +118,16 @@ void Mem_Ipw_DeInit(Mem_InstanceIdType instanceId)
         Flash_IP_DeInit(); /* [SWS_Mem_00079] */
 
         Mem_Ipw_ResultSource[instanceId] = MEM_IPW_RESULT_SRC_NONE;
+    }
+}
+
+void Mem_Ipw_Cancel(Mem_InstanceIdType instanceId)
+{
+    if (Mem_Ipw_IsInstanceSupported(instanceId) == TRUE)
+    {
+        Flash_IP_Cancel();
+        Mem_Ipw_ResultSource[instanceId] = MEM_IPW_RESULT_SRC_NONE;
+        Mem_Ipw_LocalResult[instanceId]  = MEM_JOB_FAILED;
     }
 }
 
@@ -285,7 +295,7 @@ void Mem_Ipw_MainFunction(Mem_InstanceIdType instanceId)
 {
     if (Mem_Ipw_IsInstanceSupported(instanceId) == TRUE)
     {
-        Flash_IP_MainFunction(); /* để dành; hoàn tất do interrupt điều khiển, xem Flash_IP.h */
+        Flash_IP_MainFunction();
     }
 }
 
@@ -332,11 +342,15 @@ boolean Mem_Ipw_IsLengthValid(
 {
     boolean valid = FALSE;
 
-    if ((Mem_Ipw_IsInstanceSupported(instanceId) == TRUE) && (length > 0u))
+    if ((Mem_Ipw_IsInstanceSupported(instanceId) == TRUE) &&
+        (length > 0u) &&
+        (Mem_Ipw_IsAddressValid(instanceId, address) == TRUE))
     {
-        Mem_AddressType endAddress = address + (Mem_AddressType)length;
+        const Mem_AddressType flashEnd =
+                (Mem_AddressType)(FLASH_IP_BASE_ADDRESS + FLASH_IP_TOTAL_SIZE);
 
-        valid = (boolean)(endAddress <= (Mem_AddressType)(FLASH_IP_BASE_ADDRESS + FLASH_IP_TOTAL_SIZE));
+        /* Subtraction form avoids address + length wraparound. */
+        valid = (boolean)((Mem_AddressType)length <= (flashEnd - address));
     }
 
     return valid;
@@ -363,4 +377,35 @@ boolean Mem_Ipw_IsEraseAligned(
     }
 
     return valid;
+}
+
+boolean Mem_Ipw_IsWriteAligned(
+        Mem_InstanceIdType instanceId,
+        Mem_AddressType     address,
+        Mem_LengthType      length,
+        uint8*              errorId)
+{
+    const Mem_AddressType alignment = (Mem_AddressType)FLASH_IP_WRITE_ALIGNMENT;
+
+    if ((Mem_Ipw_IsInstanceSupported(instanceId) == FALSE) ||
+        (errorId == NULL_PTR) ||
+        (alignment == 0u))
+    {
+        return FALSE;
+    }
+
+    if ((address % alignment) != 0u)
+    {
+        *errorId = MEM_E_PARAM_ADDRESS;
+        return FALSE;
+    }
+
+    if ((length % (Mem_LengthType)alignment) != 0u)
+    {
+        *errorId = MEM_E_PARAM_LENGTH;
+        return FALSE;
+    }
+
+    *errorId = 0u;
+    return TRUE;
 }

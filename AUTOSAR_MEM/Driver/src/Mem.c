@@ -77,7 +77,8 @@ static Mem_PendingRequestType  Mem_PendingRequest[MEM_INSTANCE_COUNT];
 #define MEM_DET_REPORT_ERROR(ApiId, ErrorId) \
             ((void)Det_ReportError(MEM_MODULE_ID, MEM_INDEX, (ApiId), (ErrorId)))
 #else
-#define MEM_DET_REPORT_ERROR(ApiId, ErrorId)
+#define MEM_DET_REPORT_ERROR(ApiId, ErrorId) \
+            do { (void)(ApiId); (void)(ErrorId); } while (0)
 #endif
 
 /*======================================================================================================================
@@ -181,6 +182,23 @@ static boolean Mem_CheckEraseAlignment(
     if (valid == FALSE)
     {
         MEM_DET_REPORT_ERROR(apiId, MEM_E_PARAM_ADDRESS); /* [SWS_Mem_00016] / [SWS_Mem_00035] */
+    }
+
+    return valid;
+}
+
+static boolean Mem_CheckWriteAlignment(
+        Mem_InstanceIdType instanceId,
+        Mem_AddressType     address,
+        Mem_LengthType      length,
+        uint8               apiId)
+{
+    uint8 errorId = 0u;
+    boolean valid = Mem_Ipw_IsWriteAligned(instanceId, address, length, &errorId);
+
+    if (valid == FALSE)
+    {
+        MEM_DET_REPORT_ERROR(apiId, errorId);
     }
 
     return valid;
@@ -358,6 +376,7 @@ void Mem_PropagateError(Mem_InstanceIdType instanceId)
         (Mem_CheckInstanceId(instanceId, MEM_SID_PROPAGATE_ERROR) == TRUE)) /* [SWS_Mem_00020] */
     {
         /* [SWS_Mem_00061]: đặt kết quả job là MEM_ECC_UNCORRECTED và hủy xử lý job hiện tại */
+        Mem_Ipw_Cancel(instanceId);
         Mem_InstanceRuntime[instanceId].JobResult  = MEM_ECC_UNCORRECTED;
         Mem_InstanceRuntime[instanceId].JobPending = FALSE;
 
@@ -419,6 +438,7 @@ Std_ReturnType Mem_Write(
         (Mem_CheckPointer(sourceDataPtr, MEM_SID_WRITE)                    == TRUE) && /* 00010 */
         (Mem_CheckAddress(instanceId, targetAddress, MEM_SID_WRITE)        == TRUE) && /* 00011 */
         (Mem_CheckLength(instanceId, targetAddress, length, MEM_SID_WRITE) == TRUE) && /* 00012 */
+        (Mem_CheckWriteAlignment(instanceId, targetAddress, length, MEM_SID_WRITE) == TRUE) &&
         (Mem_CheckJobPending(instanceId, MEM_SID_WRITE)                    == TRUE))   /* 00013 */
     {
         Mem_PendingRequest[instanceId].Operation = MEM_OP_WRITE;

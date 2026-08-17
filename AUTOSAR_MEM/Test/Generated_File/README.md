@@ -6,6 +6,6 @@
 
 Sinh lại từ thư mục gốc repository:
 
-    python AUTOSAR_MEM/Driver/Code_Generator/GUI/mem_configurator.py \
+    python AUTOSAR_MEM/Driver/Code_Generator/GUI/main_gui.py \
       --generate AUTOSAR_MEM/Driver/Code_Generator/GUI/examples/STM32F401.epc \
       --output AUTOSAR_MEM/Test/Generated_File

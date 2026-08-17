@@ -88,7 +88,7 @@ static void ELF_BLANKCHECK_002(void)
                                 (uint32)MEM_INCONSISTENT,
                                 (uint32)jobResult);
 }
-
+//Tạo thêm 3 trường hợp biên đầu giữa và cuối
 /* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10016], [SWS_Mem_00022], p.40
  * - Kiểm tra Mem_BlankCheck() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.

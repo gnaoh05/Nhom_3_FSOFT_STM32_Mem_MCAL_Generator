@@ -31,6 +31,10 @@ extern void Mem_Ipw_Init(Mem_InstanceIdType instanceId);
  * Được gọi từ Mem_DeInit() [SWS_Mem_00079]. */
 extern void Mem_Ipw_DeInit(Mem_InstanceIdType instanceId);
 
+/* Stop scheduling the remaining part of an active operation. The STM32 single-bank
+ * controller cannot abort the word/sector already in progress, but no next word is started. */
+extern void Mem_Ipw_Cancel(Mem_InstanceIdType instanceId);
+
 /*======================================================================================================================
  *  Truy vấn khả năng dịch vụ tùy chọn
  *  Mem.c dùng để từ chối đồng bộ dịch vụ không khả dụng bằng E_MEM_SERVICE_NOT_AVAIL theo
@@ -116,5 +120,11 @@ extern boolean Mem_Ipw_IsEraseAligned(
         Mem_InstanceIdType instanceId,
         Mem_AddressType     address,
         Mem_LengthType      length);
+
+extern boolean Mem_Ipw_IsWriteAligned(
+        Mem_InstanceIdType instanceId,
+        Mem_AddressType     address,
+        Mem_LengthType      length,
+        uint8*              errorId);
 
 #endif /* MEM_IPW_H */
