@@ -166,16 +166,26 @@ Flash_IP_JobResultType Flash_IP_Erase(uint8 sectorNum)
  * 
  * @return Flash_IP_JobResultType Result of write triggering.
  */
+/**
+ * @brief Initiates an asynchronous write operation on Flash memory.
+ * 
+ * @param[in] address   Destination physical memory address.
+ * @param[in] sourcePtr Pointer to source data buffer.
+ * @param[in] length    Number of bytes to write.
+ * 
+ * @return Flash_IP_JobResultType Result of write triggering.
+ */
 Flash_IP_JobResultType Flash_IP_Write(uint32 address, const uint8 *sourcePtr, uint32 length) 
 {
     Flash_IP_JobResultType retVal = FLASH_IP_JOB_BUSY;
-    const uint32 *srcWordPtr = NULL_PTR;
 
     if ((Flash_IP_DriverState == FLASH_IP_UNINITIALIZED) || (sourcePtr == NULL_PTR)) 
     {
         retVal = FLASH_IP_JOB_FAILED;
     }
-    else if (((address % 4U) != 0U) || ((length % 4U) != 0U) || (length == 0U)) 
+    else if (((address % (uint32)FLASH_IP_WRITE_ALIGNMENT) != 0U) || 
+             ((length % (uint32)FLASH_IP_WRITE_ALIGNMENT) != 0U) || 
+             (length == 0U)) 
     {
         retVal = FLASH_IP_ALIGNMENT_ERROR;
     }
@@ -188,8 +198,7 @@ Flash_IP_JobResultType Flash_IP_Write(uint32 address, const uint8 *sourcePtr, ui
         Flash_IP_ClearErrors();
         Flash_IP_TimeoutCounter = 0U;
 
-        srcWordPtr = (const uint32 *)(const void *)sourcePtr;
-        Flash_IP_StartProgramWord(address, srcWordPtr[0]);
+        Flash_IP_StartProgramData(address, sourcePtr);
         retVal = FLASH_IP_JOB_BUSY;
     }
 

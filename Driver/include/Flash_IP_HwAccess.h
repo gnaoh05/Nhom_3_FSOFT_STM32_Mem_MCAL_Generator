@@ -162,20 +162,26 @@ static inline void Flash_IP_StartSectorErase(uint8 sectorNum)
 }
 
 /**
- * @brief Programs a 32-bit word into the specified Flash memory address.
+ * @brief Programs data into the specified Flash memory address.
  * 
  * @param[in] address Memory target address.
- * @param[in] data    32-bit data to program.
+ * @param[in] dataPtr Pointer to the data to program.
  */
-static inline void Flash_IP_StartProgramWord(uint32 address, uint32 data)
+static inline void Flash_IP_StartProgramData(uint32 address,const uint8 *dataPtr)
 {
     uint32 crValue = FLASH_IP_REG->CR;
 
     crValue &= ~(FLASH_IP_CR_PSIZE_MASK | FLASH_IP_CR_SER);
-    crValue |= FLASH_IP_CR_PSIZE_X32 | FLASH_IP_CR_PG;
+    crValue |= ((uint32)(FLASH_IP_PSIZE) << FLASH_IP_CR_PSIZE_POS) | FLASH_IP_CR_PG;
     FLASH_IP_REG->CR = crValue;
-
-    *(__IO uint32*)address = data;
+    
+#if(FLASH_IP_PSIZE == FLASH_IP_PSIZE_X8)
+    *(__IO uint8*)address = *dataPtr;
+#elif(FLASH_IP_PSIZE == FLASH_IP_PSIZE_X16)
+    *(__IO uint16*)address = *((const uint16*)dataPtr);
+#else
+    *(__IO uint32*)address = *((const uint32*)dataPtr);
+#endif
 }
 
 /**
