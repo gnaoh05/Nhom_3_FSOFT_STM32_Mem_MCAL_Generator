@@ -2,7 +2,7 @@
 #define MEM_TYPES_H
 
 #include "Std_Types.h"
-// #include "MemAcc_GeneralTypes.h"
+#include "MemAcc_GeneralTypes.h"
 
 /* --- [SWS_Mem_10002 -> 10026] Định nghĩa kiểu đặc thù của Driver --- */
 typedef MemAcc_AddressType Mem_AddressType;     /* Địa chỉ vật lý */
