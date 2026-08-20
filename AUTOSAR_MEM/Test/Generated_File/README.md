@@ -1,8 +1,8 @@
 # Tệp Test Được Sinh
 
 - `Mem_Test_Traceability.md`: ma trận coverage theo Requirement cho bộ test AUTOSAR MemoryDriver mức thanh ghi trên STM32, gồm Requirement được kiểm tra runtime, chỉ review và không áp dụng.
-- `include/Mem_Cfg.h`, `include/Flash_IP_Cfg.h`: header cấu hình pre-compile do AUTOSAR Mem Configurator sinh.
-- `src/Mem_Cfg.c`, `src/Flash_IP_Cfg.c`: dữ liệu cấu hình được STM32CubeIDE compile cùng integration test.
+- `Mem_Cfg.h`, `Flash_IP_Cfg.h`: header cấu hình pre-compile do AUTOSAR Mem Configurator sinh.
+- `Mem_Cfg.c`, `Flash_IP_Cfg.c`: dữ liệu cấu hình được STM32CubeIDE compile cùng integration test.
 
 Sinh lại từ thư mục gốc repository:
 

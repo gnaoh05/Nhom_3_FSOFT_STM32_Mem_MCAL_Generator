@@ -10,7 +10,7 @@
 
 /* --- Các Macro cấu hình sinh ra từ GUI --- */
 #define MEM_DEV_ERROR_DETECT  (STD_ON)
-#define MEM_MAX_INSTANCES     (7777777777777u)
+#define MEM_MAX_INSTANCES     (1u)
 #define MEM_INDEX             (0u)
 #define MEM_ERASED_VALUE      (0xFFu)
 

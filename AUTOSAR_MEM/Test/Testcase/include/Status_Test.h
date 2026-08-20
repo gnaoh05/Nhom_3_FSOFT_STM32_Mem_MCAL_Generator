@@ -1,10 +1,10 @@
 /******************************************************************************
- * FILE: ELF_Write_Test.h
- * MÔ TẢ: Nhóm test ELF WRITE
+ * FILE: Status_Test.h
+ * MÔ TẢ: Nhóm test ELF STATUS
  ******************************************************************************/
 
-#ifndef ELF_WRITE_TEST_H
-#define ELF_WRITE_TEST_H
+#ifndef STATUS_TEST_H
+#define STATUS_TEST_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,10 +14,10 @@ extern "C" {
  * HÀM CÔNG KHAI
  ******************************************************************************/
 
-void ELF_Write_Test(void);
+void Status_Test(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* ELF_WRITE_TEST_H */
+#endif /* STATUS_TEST_H */

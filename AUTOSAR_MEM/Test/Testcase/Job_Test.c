@@ -1,16 +1,16 @@
 /******************************************************************************
- * FILE: ELF_Job_Test.c
+ * FILE: Job_Test.c
  * MÔ TẢ: Test điều khiển job cho AUTOSAR Mem driver
  ******************************************************************************/
 
-#include "ELF_Job_Test.h"
+#include "Job_Test.h"
 #include "TestManager.h"
 
 /* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_00057], [SWS_Mem_00059], [SWS_Mem_00007], [SWS_Mem_10012], p.14-15,36
  * - Kiểm tra yêu cầu job thứ hai bị từ chối khi job thứ nhất vẫn pending.
  */
-static void ELF_JOB_001(void)
+static void JOB_001(void)
 {
     Mem_DataType   readBufferA[8];
     Mem_DataType   readBufferB[8];
@@ -39,7 +39,7 @@ static void ELF_JOB_001(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10015], [SWS_Mem_00061], p.35
  * - Kiểm tra Mem_PropagateError() hủy job hiện tại và đặt MEM_ECC_UNCORRECTED.
  */
-static void ELF_JOB_002(void)
+static void JOB_002(void)
 {
     Mem_DataType            readBuffer[8];
     Std_ReturnType          retVal;
@@ -67,7 +67,7 @@ static void ELF_JOB_002(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00070], p.23,41
  * - Kiểm tra hardware-specific service không được hỗ trợ trả E_MEM_SERVICE_NOT_AVAIL.
  */
-static void ELF_JOB_003(void)
+static void JOB_003(void)
 {
     Mem_DataType   dataBuffer[4] = { 0u, 0u, 0u, 0u };
     Mem_LengthType length = (Mem_LengthType)sizeof(dataBuffer);
@@ -88,7 +88,7 @@ static void ELF_JOB_003(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10024], [SWS_Mem_00082], p.16,33
  * - Kiểm tra Mem_Suspend() trả E_MEM_SERVICE_NOT_AVAIL khi công nghệ bộ nhớ không hỗ trợ suspend.
  */
-static void ELF_JOB_004(void)
+static void JOB_004(void)
 {
     Std_ReturnType retVal;
 
@@ -107,7 +107,7 @@ static void ELF_JOB_004(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10025], [SWS_Mem_00082], p.16,34
  * - Kiểm tra Mem_Resume() trả E_MEM_SERVICE_NOT_AVAIL khi công nghệ bộ nhớ không hỗ trợ resume.
  */
-static void ELF_JOB_005(void)
+static void JOB_005(void)
 {
     Std_ReturnType retVal;
 
@@ -126,7 +126,7 @@ static void ELF_JOB_005(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10015], [SWS_Mem_00020], p.35
  * - Kiểm tra Mem_PropagateError() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
-static void ELF_JOB_006(void)
+static void JOB_006(void)
 {
     MemAcc_MemJobResultType jobResult;
     boolean                 passed;
@@ -151,7 +151,7 @@ static void ELF_JOB_006(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00026], p.41-42
  * - Kiểm tra Mem_HwSpecificService() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
-static void ELF_JOB_007(void)
+static void JOB_007(void)
 {
     Mem_DataType   dataBuffer[4] = { 0u, 0u, 0u, 0u };
     Mem_LengthType length = (Mem_LengthType)sizeof(dataBuffer);
@@ -175,7 +175,7 @@ static void ELF_JOB_007(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00027], p.41-42
  * - Kiểm tra Mem_HwSpecificService() từ chối data pointer NULL với MEM_E_PARAM_POINTER.
  */
-static void ELF_JOB_008(void)
+static void JOB_008(void)
 {
     Mem_LengthType length = 4u;
     Std_ReturnType retVal;
@@ -198,7 +198,7 @@ static void ELF_JOB_008(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10017], [SWS_Mem_00027], p.41-42
  * - Kiểm tra Mem_HwSpecificService() từ chối length pointer NULL với MEM_E_PARAM_POINTER.
  */
-static void ELF_JOB_009(void)
+static void JOB_009(void)
 {
     Mem_DataType   dataBuffer[4] = { 0u, 0u, 0u, 0u };
     Std_ReturnType retVal;
@@ -221,7 +221,7 @@ static void ELF_JOB_009(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10024], [SWS_Mem_00091], p.33
  * - Kiểm tra Mem_Suspend() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
-static void ELF_JOB_010(void)
+static void JOB_010(void)
 {
     Std_ReturnType retVal;
 
@@ -243,7 +243,7 @@ static void ELF_JOB_010(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10025], [SWS_Mem_00092], p.34
  * - Kiểm tra Mem_Resume() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
-static void ELF_JOB_011(void)
+static void JOB_011(void)
 {
     Std_ReturnType retVal;
 
@@ -261,21 +261,21 @@ static void ELF_JOB_011(void)
                                 (uint32)retVal);
 }
 
-void ELF_Job_Test(void)
+void Job_Test(void)
 {
-    TestManager_BeginGroup(TEST_ELF_JOB);
+    TestManager_BeginGroup(TEST_JOB);
 
-    ELF_JOB_001();
-    ELF_JOB_002();
-    ELF_JOB_003();
-    ELF_JOB_004();
-    ELF_JOB_005();
-    ELF_JOB_006();
-    ELF_JOB_007();
-    ELF_JOB_008();
-    ELF_JOB_009();
-    ELF_JOB_010();
-    ELF_JOB_011();
+    JOB_001();
+    JOB_002();
+    JOB_003();
+    JOB_004();
+    JOB_005();
+    JOB_006();
+    JOB_007();
+    JOB_008();
+    JOB_009();
+    JOB_010();
+    JOB_011();
 
     TestManager_EndGroup();
 }

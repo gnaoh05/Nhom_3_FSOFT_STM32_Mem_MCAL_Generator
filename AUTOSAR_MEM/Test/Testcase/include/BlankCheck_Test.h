@@ -1,10 +1,10 @@
 /******************************************************************************
- * FILE: ELF_Status_Test.h
- * MÔ TẢ: Nhóm test ELF STATUS
+ * FILE: BlankCheck_Test.h
+ * MÔ TẢ: Nhóm test ELF BLANKCHECK
  ******************************************************************************/
 
-#ifndef ELF_STATUS_TEST_H
-#define ELF_STATUS_TEST_H
+#ifndef BLANKCHECK_TEST_H
+#define BLANKCHECK_TEST_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,10 +14,10 @@ extern "C" {
  * HÀM CÔNG KHAI
  ******************************************************************************/
 
-void ELF_Status_Test(void);
+void BlankCheck_Test(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* ELF_STATUS_TEST_H */
+#endif /* BLANKCHECK_TEST_H */

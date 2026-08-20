@@ -8,6 +8,10 @@ extern "C" {
 #include "Platform_Types.h"
 #include <stdbool.h>
 
+#ifndef __IO
+#define __IO volatile
+#endif
+
 #define STD_TYPES_AR_RELEASE_MAJOR_VERSION      4U
 #define STD_TYPES_AR_RELEASE_MINOR_VERSION      4U
 #define STD_TYPES_AR_RELEASE_REVISION_VERSION   0U
@@ -36,6 +40,10 @@ typedef bool boolean;
 
 #ifndef NULL_PTR
 #define NULL_PTR    ((void*)0)
+#endif
+
+#ifndef NULL
+#define NULL        ((void*)0)
 #endif
 
 typedef struct

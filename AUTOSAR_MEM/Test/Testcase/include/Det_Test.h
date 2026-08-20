@@ -1,10 +1,10 @@
 /******************************************************************************
- * FILE: ELF_Erase_Test.h
- * MÔ TẢ: Nhóm test ELF ERASE
+ * FILE: Det_Test.h
+ * MÔ TẢ: Nhóm test ELF DET
  ******************************************************************************/
 
-#ifndef ELF_ERASE_TEST_H
-#define ELF_ERASE_TEST_H
+#ifndef DET_TEST_H
+#define DET_TEST_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,10 +14,10 @@ extern "C" {
  * HÀM CÔNG KHAI
  ******************************************************************************/
 
-void ELF_Erase_Test(void);
+void Det_Test(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* ELF_ERASE_TEST_H */
+#endif /* DET_TEST_H */

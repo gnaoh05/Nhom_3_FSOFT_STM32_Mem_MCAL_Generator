@@ -1,130 +1,107 @@
-/**********************************************************************************************************************
- *  FILE:         Mem_IPW.h
- *  MODULE:       Mem_IPW (Memory Driver - IP Wrapper Layer)
- *  MÔ TẢ:        Lớp wrapper phần cứng được Mem.c sử dụng nội bộ.
- *
- *                AUTOSAR_CP_SWS_MemoryDriver không định nghĩa trực tiếp lớp "IPW"; nó chỉ yêu cầu public API
- *                của Mem driver (Mem.c) không phụ thuộc thiết bị nhớ ([SWS_Mem_00035]) và khi build thành binary
- *                riêng thì phải tự chứa ([SWS_Mem_00039]). Theo quy ước AUTOSAR MCAL, ví dụ Fls_Ipw, Adc_Ipw,
- *                Mem_IPW là lớp mỏng giữa Mem.c tuân thủ SWS và driver thanh ghi/IP của thiết bị nhớ thực tế.
- *                Nhờ đó, port sang phần cứng mới chỉ cần hiện thực lại Mem_IPW.c.
- *
- *                Trong dự án này, Mem_IPW.c wrapper Flash_IP (Flash_IP.h/.c), driver thanh ghi bare-metal
- *                cho Flash nội STM32F401RE. Mọi chi tiết riêng chip như thanh ghi, hình học sector và IRQ
- *                nằm trong Flash_IP; Mem_IPW.c chỉ chuyển đổi giữa API generic theo instance của Mem driver
- *                và API một thiết bị Flash của Flash_IP.
- *********************************************************************************************************************/
-
 #ifndef MEM_IPW_H
 #define MEM_IPW_H
 
-#include "Mem.h"
+#include "Std_Types.h"
+#include "Mem_Types.h"
+#include "Mem_Cfg.h"
+#include "Mem_IPW_Types.h"
+#include "Flash_IP.h"
+#include "Flash_IP_Cfg.h"
 
-/*======================================================================================================================
- *  Vòng đời
- *====================================================================================================================*/
+/**
+ * @brief Initializes the low-level Flash hardware driver using provided configuration.
+ * 
+ * @param[in] ConfigPtr Pointer to the memory driver configuration structure.
+ */
+void Mem_Ipw_Init(const Mem_ConfigType *ConfigPtr);
 
-/* Khởi tạo trạng thái riêng phần cứng cho một Mem driver instance. Được gọi từ Mem_Init() [SWS_Mem_00001]. */
-extern void Mem_Ipw_Init(Mem_InstanceIdType instanceId);
+/**
+ * @brief Link-time compatibility tick required by Mem_MainFunction.
+ *        Runtime behavior has not been validated in this integration step.
+ */
+void Mem_Ipw_MainFunction(Mem_InstanceIdType InstanceId);
 
-/* Hủy thao tác phần cứng đang chạy và hủy khởi tạo trạng thái phần cứng cho một instance.
- * Được gọi từ Mem_DeInit() [SWS_Mem_00079]. */
-extern void Mem_Ipw_DeInit(Mem_InstanceIdType instanceId);
+/**
+ * @brief Retrieves the current busy/idle execution status of the underlying Flash hardware.
+ * 
+ * @param[in] InstanceId Identification of the memory instance.
+ * 
+ * @return Mem_Ipw_StatusType
+ * @retval MEM_IPW_IDLE  Hardware is idle and ready for a new request.
+ * @retval MEM_IPW_BUSY  Hardware is currently processing an ongoing job.
+ * @retval MEM_IPW_ERROR Hardware reported an error or operation timed out.
+ */
+Mem_Ipw_StatusType Mem_Ipw_GetStatus(Mem_InstanceIdType InstanceId);
 
-/* Stop scheduling the remaining part of an active operation. The STM32 single-bank
- * controller cannot abort the word/sector already in progress, but no next word is started. */
-extern void Mem_Ipw_Cancel(Mem_InstanceIdType instanceId);
+/**
+ * @brief Reads a contiguous block of data directly from Flash memory space.
+ * 
+ * @param[in]  InstanceId Identification of the memory instance.
+ * @param[in]  Address    Physical source address to read from.
+ * @param[out] DataPtr    Pointer to destination buffer where data will be stored.
+ * @param[in]  Length     Number of bytes to read.
+ * 
+ * @return Std_ReturnType
+ * @retval E_OK     Data read operation completed successfully.
+ * @retval E_NOT_OK Read operation failed or invalid parameter provided.
+ */
+Std_ReturnType Mem_Ipw_Read(Mem_InstanceIdType InstanceId, 
+                            Mem_AddressType Address, 
+                            Mem_DataType *DataPtr, 
+                            Mem_LengthType Length);
 
-/*======================================================================================================================
- *  Truy vấn khả năng dịch vụ tùy chọn
- *  Mem.c dùng để từ chối đồng bộ dịch vụ không khả dụng bằng E_MEM_SERVICE_NOT_AVAIL theo
- *  [SWS_Mem_00070] và quy tắc Suspend/Resume tại [SWS_Mem_00082].
- *====================================================================================================================*/
+/**
+ * @brief Dispatches a write/programming request to the low-level Flash hardware.
+ * 
+ * @param[in] InstanceId Identification of the memory instance.
+ * @param[in] Address    Physical destination address to write to.
+ * @param[in] DataPtr    Pointer to the source data buffer.
+ * @param[in] Length     Number of bytes to write.
+ * 
+ * @return Std_ReturnType
+ * @retval E_OK     Write operation was triggered successfully.
+ * @retval E_NOT_OK Write operation failed or invalid alignment/parameters.
+ */
+Std_ReturnType Mem_Ipw_Write(Mem_InstanceIdType InstanceId, 
+                             Mem_AddressType Address, 
+                             const Mem_DataType *DataPtr, 
+                             Mem_LengthType Length);
 
-extern boolean Mem_Ipw_IsHwSpecificServiceSupported(
-        Mem_InstanceIdType   instanceId,
-        Mem_HwServiceIdType  hwServiceId);
+/**
+ * @brief Converts the target address to sector ID and triggers physical sector erase.
+ * 
+ * @param[in] InstanceId Identification of the memory instance.
+ * @param[in] Address    Physical memory address within the sector to erase.
+ * @param[in] Length     Length of the erase region.
+ * 
+ * @return Std_ReturnType
+ * @retval E_OK     Erase operation was triggered successfully.
+ * @retval E_NOT_OK Erase trigger failed or address out of range.
+ */
+Std_ReturnType Mem_Ipw_Erase(Mem_InstanceIdType InstanceId, 
+                             Mem_AddressType Address, 
+                             Mem_LengthType Length);
 
-extern boolean Mem_Ipw_IsSuspendResumeSupported(Mem_InstanceIdType instanceId);
+/**
+ * @brief Verifies whether the specified Flash memory area is blank (erased to 0xFF).
+ * 
+ * @param[in] InstanceId Identification of the memory instance.
+ * @param[in] Address    Physical start address to verify.
+ * @param[in] Length     Number of bytes to verify.
+ * 
+ * @return Std_ReturnType
+ * @retval E_OK     Memory area is completely blank (all 0xFF).
+ * @retval E_NOT_OK Area is not blank, hardware busy, or validation failed.
+ */
+Std_ReturnType Mem_Ipw_BlankCheck(Mem_InstanceIdType InstanceId, 
+                                  Mem_AddressType Address, 
+                                  Mem_LengthType Length);
 
-/*======================================================================================================================
- *  Thao tác bộ nhớ bất đồng bộ
- *  Mỗi hàm chỉ kích hoạt thao tác phần cứng và trả về ngay. Tiến trình được xử lý bởi
- *  Mem_Ipw_MainFunction() và kết quả lấy bằng Mem_Ipw_GetJobResult().
- *====================================================================================================================*/
-
-extern Std_ReturnType Mem_Ipw_Read(
-        Mem_InstanceIdType instanceId,
-        Mem_AddressType     sourceAddress,
-        Mem_DataType*       destinationDataPtr,
-        Mem_LengthType      length);
-
-extern Std_ReturnType Mem_Ipw_Write(
-        Mem_InstanceIdType   instanceId,
-        Mem_AddressType      targetAddress,
-        const Mem_DataType*  sourceDataPtr,
-        Mem_LengthType       length);
-
-extern Std_ReturnType Mem_Ipw_Erase(
-        Mem_InstanceIdType instanceId,
-        Mem_AddressType     targetAddress,
-        Mem_LengthType      length);
-
-extern Std_ReturnType Mem_Ipw_BlankCheck(
-        Mem_InstanceIdType instanceId,
-        Mem_AddressType     targetAddress,
-        Mem_LengthType      length);
-
-extern Std_ReturnType Mem_Ipw_HwSpecificService(
-        Mem_InstanceIdType   instanceId,
-        Mem_HwServiceIdType  hwServiceId,
-        Mem_DataType*        dataPtr,
-        Mem_LengthType*      lengthPtr);
-
-/*======================================================================================================================
- *  Suspend / Resume  [SRS_MemHwAb_14031] / [SWS_Mem_00082]
- *====================================================================================================================*/
-
-extern Std_ReturnType Mem_Ipw_Suspend(Mem_InstanceIdType instanceId);
-extern Std_ReturnType Mem_Ipw_Resume(Mem_InstanceIdType instanceId);
-
-/*======================================================================================================================
- *  Lập lịch / lấy kết quả job
- *====================================================================================================================*/
-
-/* Tiến thao tác phần cứng đang chạy, nếu có, của instance một bước.
- * Được gọi từ Mem_MainFunction() [SWS_Mem_00066]. */
-extern void Mem_Ipw_MainFunction(Mem_InstanceIdType instanceId);
-
-/* Trả về kết quả job phần cứng hiện tại của instance (MEM_JOB_OK / MEM_JOB_PENDING /
- * MEM_JOB_FAILED / MEM_INCONSISTENT / MEM_ECC_CORRECTED / MEM_ECC_UNCORRECTED). */
-extern MemAcc_MemJobResultType Mem_Ipw_GetJobResult(Mem_InstanceIdType instanceId);
-
-/*======================================================================================================================
- *  Hàm hỗ trợ kiểm tra địa chỉ / độ dài
- *  Mem.c dùng để hiện thực kiểm tra development error [SWS_Mem_00006][SWS_Mem_00072][SWS_Mem_00011]
- *  [SWS_Mem_00012][SWS_Mem_00016][SWS_Mem_00017][SWS_Mem_00023][SWS_Mem_00024].
- *====================================================================================================================*/
-
-extern boolean Mem_Ipw_IsAddressValid(Mem_InstanceIdType instanceId, Mem_AddressType address);
-
-extern boolean Mem_Ipw_IsLengthValid(
-        Mem_InstanceIdType instanceId,
-        Mem_AddressType     address,
-        Mem_LengthType      length);
-
-/* [SWS_Mem_00035]: Mem.c dùng trong Mem_CheckEraseAlignment() để từ chối đồng bộ Mem_Erase() không khớp
- * chính xác một sector vật lý TRƯỚC KHI job được chấp nhận theo [SWS_Mem_00059], tức trước khi nó được xếp
- * hàng để Mem_MainFunction() kích hoạt phần cứng sau đó. */
-extern boolean Mem_Ipw_IsEraseAligned(
-        Mem_InstanceIdType instanceId,
-        Mem_AddressType     address,
-        Mem_LengthType      length);
-
-extern boolean Mem_Ipw_IsWriteAligned(
-        Mem_InstanceIdType instanceId,
-        Mem_AddressType     address,
-        Mem_LengthType      length,
-        uint8*              errorId);
+/**
+ * @brief Cancels the ongoing asynchronous hardware operation.
+ * 
+ * @param[in] InstanceId Identification of the memory instance.
+ */
+void Mem_Ipw_Cancel(Mem_InstanceIdType InstanceId);
 
 #endif /* MEM_IPW_H */

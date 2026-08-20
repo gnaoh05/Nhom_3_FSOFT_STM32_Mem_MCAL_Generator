@@ -1,9 +1,9 @@
 /******************************************************************************
- * FILE: ELF_Erase_Test.c
+ * FILE: Erase_Test.c
  * MÔ TẢ: Test đường xóa cho AUTOSAR Mem driver
  ******************************************************************************/
 
-#include "ELF_Erase_Test.h"
+#include "Erase_Test.h"
 #include "TestManager.h"
 
 /* Truy vết:
@@ -11,7 +11,7 @@
  * - Kiểm tra yêu cầu xóa sector hợp lệ hoàn tất với MEM_JOB_OK; kiểm tra trạng thái đã xóa là cơ chế xác nhận
  *   của upper layer, phù hợp với [SWS_Mem_00088].
  */
-static void ELF_ERASE_001(void)
+static void ERASE_001(void)
 {
     Mem_DataType            writePattern[TEST_FLASH_COMPARE_LENGTH];
     Std_ReturnType          retVal;
@@ -62,7 +62,7 @@ static void ELF_ERASE_001(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10014], [SWS_Mem_00016], [SWS_Mem_00035], p.24,39
  * - Kiểm tra Mem_Erase() từ chối yêu cầu không khớp ranh giới sector vật lý.
  */
-static void ELF_ERASE_002(void)
+static void ERASE_002(void)
 {
     Std_ReturnType retVal;
 
@@ -86,7 +86,7 @@ static void ELF_ERASE_002(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10014], [SWS_Mem_00016], p.39
  * - Kiểm tra Mem_Erase() từ chối địa chỉ ngoài vùng Flash đã cấu hình.
  */
-static void ELF_ERASE_003(void)
+static void ERASE_003(void)
 {
     Std_ReturnType retVal;
 
@@ -110,7 +110,7 @@ static void ELF_ERASE_003(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10014], [SWS_Mem_00015], p.39
  * - Kiểm tra Mem_Erase() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
-static void ELF_ERASE_004(void)
+static void ERASE_004(void)
 {
     Std_ReturnType retVal;
 
@@ -134,7 +134,7 @@ static void ELF_ERASE_004(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10014], [SWS_Mem_00017], p.39
  * - Kiểm tra Mem_Erase() từ chối độ dài không hợp lệ với MEM_E_PARAM_LENGTH.
  */
-static void ELF_ERASE_005(void)
+static void ERASE_005(void)
 {
     Std_ReturnType retVal;
 
@@ -158,7 +158,7 @@ static void ELF_ERASE_005(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10014], [SWS_Mem_00018], p.39
  * - Kiểm tra Mem_Erase() từ chối yêu cầu khi một job khác đang pending.
  */
-static void ELF_ERASE_006(void)
+static void ERASE_006(void)
 {
     Mem_DataType   readBuffer[8];
     Std_ReturnType firstRetVal;
@@ -185,16 +185,16 @@ static void ELF_ERASE_006(void)
                                 (uint32)secondRetVal);
 }
 
-void ELF_Erase_Test(void)
+void Erase_Test(void)
 {
-    TestManager_BeginGroup(TEST_ELF_ERASE);
+    TestManager_BeginGroup(TEST_ERASE);
 
-    ELF_ERASE_001();
-    ELF_ERASE_002();
-    ELF_ERASE_003();
-    ELF_ERASE_004();
-    ELF_ERASE_005();
-    ELF_ERASE_006();
+    ERASE_001();
+    ERASE_002();
+    ERASE_003();
+    ERASE_004();
+    ERASE_005();
+    ERASE_006();
 
     TestManager_EndGroup();
 }

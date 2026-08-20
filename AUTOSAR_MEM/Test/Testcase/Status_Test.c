@@ -1,16 +1,16 @@
 /******************************************************************************
- * FILE: ELF_Status_Test.c
+ * FILE: Status_Test.c
  * MÔ TẢ: Test trạng thái job cho AUTOSAR Mem driver
  ******************************************************************************/
 
-#include "ELF_Status_Test.h"
+#include "Status_Test.h"
 #include "TestManager.h"
 
 /* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10011], [SWS_Mem_00029], [SWS_Mem_00001], p.15,30,32
  * - Kiểm tra Mem_GetJobResult() báo MEM_JOB_OK sau khi driver khởi tạo.
  */
-static void ELF_STATUS_001(void)
+static void STATUS_001(void)
 {
     MemAcc_MemJobResultType jobResult;
 
@@ -29,7 +29,7 @@ static void ELF_STATUS_001(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00030], [SWS_Mem_00029], p.15,36
  * - Kiểm tra yêu cầu đọc bất đồng bộ được chấp nhận đổi kết quả job thành MEM_JOB_PENDING.
  */
-static void ELF_STATUS_002(void)
+static void STATUS_002(void)
 {
     Mem_DataType            buffer[8];
     Std_ReturnType          retVal;
@@ -53,7 +53,7 @@ static void ELF_STATUS_002(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00066], [SWS_Mem_00067], p.15,36
  * - Kiểm tra Mem_MainFunction() hoàn tất yêu cầu đọc đã chấp nhận và báo MEM_JOB_OK.
  */
-static void ELF_STATUS_003(void)
+static void STATUS_003(void)
 {
     Mem_DataType            buffer[8];
     Std_ReturnType          retVal;
@@ -75,7 +75,7 @@ static void ELF_STATUS_003(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10011], [SWS_Mem_00090], p.32
  * - Kiểm tra Mem_GetJobResult() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
-static void ELF_STATUS_004(void)
+static void STATUS_004(void)
 {
     MemAcc_MemJobResultType jobResult;
     boolean                 passed;
@@ -99,7 +99,7 @@ static void ELF_STATUS_004(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_00059], [SWS_Mem_00072], [SWS_Mem_00029], [SWS_Mem_10012], p.15,32,36
  * - Kiểm tra yêu cầu bị từ chối đồng bộ trả E_NOT_OK và không đổi kết quả job đã lưu khỏi MEM_JOB_OK.
  */
-static void ELF_STATUS_005(void)
+static void STATUS_005(void)
 {
     Mem_DataType            buffer[4];
     Std_ReturnType          retVal;
@@ -126,15 +126,15 @@ static void ELF_STATUS_005(void)
                                 (uint32)jobResult);
 }
 
-void ELF_Status_Test(void)
+void Status_Test(void)
 {
-    TestManager_BeginGroup(TEST_ELF_STATUS);
+    TestManager_BeginGroup(TEST_STATUS);
 
-    ELF_STATUS_001();
-    ELF_STATUS_002();
-    ELF_STATUS_003();
-    ELF_STATUS_004();
-    ELF_STATUS_005();
+    STATUS_001();
+    STATUS_002();
+    STATUS_003();
+    STATUS_004();
+    STATUS_005();
 
     TestManager_EndGroup();
 }

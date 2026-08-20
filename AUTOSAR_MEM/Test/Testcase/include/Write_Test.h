@@ -1,10 +1,10 @@
 /******************************************************************************
- * FILE: ELF_BlankCheck_Test.h
- * MÔ TẢ: Nhóm test ELF BLANKCHECK
+ * FILE: Write_Test.h
+ * MÔ TẢ: Nhóm test ELF WRITE
  ******************************************************************************/
 
-#ifndef ELF_BLANKCHECK_TEST_H
-#define ELF_BLANKCHECK_TEST_H
+#ifndef WRITE_TEST_H
+#define WRITE_TEST_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,10 +14,10 @@ extern "C" {
  * HÀM CÔNG KHAI
  ******************************************************************************/
 
-void ELF_BlankCheck_Test(void);
+void Write_Test(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* ELF_BLANKCHECK_TEST_H */
+#endif /* WRITE_TEST_H */

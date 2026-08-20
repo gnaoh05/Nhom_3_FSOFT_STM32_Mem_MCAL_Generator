@@ -1,16 +1,16 @@
 /******************************************************************************
- * FILE: ELF_Init_Test.c
+ * FILE: Init_Test.c
  * MÔ TẢ: Test khởi tạo cho AUTOSAR Mem driver
  ******************************************************************************/
 
-#include "ELF_Init_Test.h"
+#include "Init_Test.h"
 #include "TestManager.h"
 
 /* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10008], [SWS_Mem_00001], p.29-30
  * - Kiểm tra Mem_Init() khởi tạo kết quả job là MEM_JOB_OK.
  */
-static void ELF_INIT_001(void)
+static void INIT_001(void)
 {
     MemAcc_MemJobResultType jobResult;
 
@@ -29,7 +29,7 @@ static void ELF_INIT_001(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10009], p.31
  * - Kiểm tra Mem_GetVersionInfo() trả về thông tin nhận dạng module và phiên bản phần mềm.
  */
-static void ELF_INIT_002(void)
+static void INIT_002(void)
 {
 #if (MEM_VERSION_INFO_API == STD_ON)
     Std_VersionInfoType versionInfo = { 0u, 0u, 0u, 0u, 0u };
@@ -64,7 +64,7 @@ static void ELF_INIT_002(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10008], [SWS_Mem_00087], p.29-30
  * - Kiểm tra Mem_Init() báo MEM_E_PARAM_POINTER khi configPtr khác NULL.
  */
-static void ELF_INIT_003(void)
+static void INIT_003(void)
 {
     MemAcc_MemJobResultType jobResult;
     boolean                 passed;
@@ -89,7 +89,7 @@ static void ELF_INIT_003(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10009], [SWS_Mem_00002], p.31
  * - Kiểm tra Mem_GetVersionInfo() báo MEM_E_PARAM_POINTER khi versionInfoPtr là NULL.
  */
-static void ELF_INIT_004(void)
+static void INIT_004(void)
 {
 #if (MEM_VERSION_INFO_API == STD_ON)
     boolean passed;
@@ -121,7 +121,7 @@ static void ELF_INIT_004(void)
  *   p.23,25,30-31
  * - Kiểm tra Mem_DeInit() hủy khởi tạo trạng thái module để lời gọi API tiếp theo bị từ chối do chưa khởi tạo.
  */
-static void ELF_INIT_005(void)
+static void INIT_005(void)
 {
     Mem_DataType   buffer[4];
     Std_ReturnType retVal;
@@ -147,15 +147,15 @@ static void ELF_INIT_005(void)
                                 (uint32)retVal);
 }
 
-void ELF_Init_Test(void)
+void Init_Test(void)
 {
-    TestManager_BeginGroup(TEST_ELF_INIT);
+    TestManager_BeginGroup(TEST_INIT);
 
-    ELF_INIT_001();
-    ELF_INIT_002();
-    ELF_INIT_003();
-    ELF_INIT_004();
-    ELF_INIT_005();
+    INIT_001();
+    INIT_002();
+    INIT_003();
+    INIT_004();
+    INIT_005();
 
     TestManager_EndGroup();
 }

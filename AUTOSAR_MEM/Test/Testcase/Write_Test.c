@@ -1,9 +1,9 @@
 /******************************************************************************
- * FILE: ELF_Write_Test.c
+ * FILE: Write_Test.c
  * MÔ TẢ: Test đường ghi cho AUTOSAR Mem driver
  ******************************************************************************/
 
-#include "ELF_Write_Test.h"
+#include "Write_Test.h"
 #include "TestManager.h"
 
 /* Truy vết:
@@ -11,7 +11,7 @@
  * - Kiểm tra yêu cầu ghi hợp lệ hoàn tất với MEM_JOB_OK; đọc lại Flash là cơ chế xác nhận của upper layer,
  *   phù hợp với [SWS_Mem_00088].
  */
-static void ELF_WRITE_001(void)
+static void WRITE_001(void)
 {
     Mem_DataType            writePattern[TEST_FLASH_COMPARE_LENGTH];
     Mem_DataType            readBack[TEST_FLASH_COMPARE_LENGTH];
@@ -57,7 +57,7 @@ static void ELF_WRITE_001(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10013], [SWS_Mem_00011], p.38
  * - Kiểm tra Mem_Write() từ chối địa chỉ không hợp lệ với MEM_E_PARAM_ADDRESS.
  */
-static void ELF_WRITE_002(void)
+static void WRITE_002(void)
 {
     Mem_DataType   writePattern[4];
     Std_ReturnType retVal;
@@ -80,7 +80,7 @@ static void ELF_WRITE_002(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10013], [SWS_Mem_00009], p.37-38
  * - Kiểm tra Mem_Write() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
-static void ELF_WRITE_003(void)
+static void WRITE_003(void)
 {
     Mem_DataType   writePattern[4];
     Std_ReturnType retVal;
@@ -107,7 +107,7 @@ static void ELF_WRITE_003(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10013], [SWS_Mem_00010], p.37-38
  * - Kiểm tra Mem_Write() từ chối source buffer NULL với MEM_E_PARAM_POINTER.
  */
-static void ELF_WRITE_004(void)
+static void WRITE_004(void)
 {
     Std_ReturnType retVal;
 
@@ -132,7 +132,7 @@ static void ELF_WRITE_004(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10013], [SWS_Mem_00012], p.38
  * - Kiểm tra Mem_Write() từ chối độ dài không hợp lệ với MEM_E_PARAM_LENGTH.
  */
-static void ELF_WRITE_005(void)
+static void WRITE_005(void)
 {
     Mem_DataType   writePattern[4];
     Std_ReturnType retVal;
@@ -159,7 +159,7 @@ static void ELF_WRITE_005(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10013], [SWS_Mem_00013], p.38
  * - Kiểm tra Mem_Write() từ chối yêu cầu khi một job khác đang pending.
  */
-static void ELF_WRITE_006(void)
+static void WRITE_006(void)
 {
     Mem_DataType   readBuffer[8];
     Mem_DataType   writePattern[4];
@@ -189,16 +189,16 @@ static void ELF_WRITE_006(void)
                                 (uint32)secondRetVal);
 }
 
-void ELF_Write_Test(void)
+void Write_Test(void)
 {
-    TestManager_BeginGroup(TEST_ELF_WRITE);
+    TestManager_BeginGroup(TEST_WRITE);
 
-    ELF_WRITE_001();
-    ELF_WRITE_002();
-    ELF_WRITE_003();
-    ELF_WRITE_004();
-    ELF_WRITE_005();
-    ELF_WRITE_006();
+    WRITE_001();
+    WRITE_002();
+    WRITE_003();
+    WRITE_004();
+    WRITE_005();
+    WRITE_006();
 
     TestManager_EndGroup();
 }

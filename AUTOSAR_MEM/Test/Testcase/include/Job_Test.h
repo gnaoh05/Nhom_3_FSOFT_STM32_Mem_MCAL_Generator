@@ -1,10 +1,10 @@
 /******************************************************************************
- * FILE: ELF_Det_Test.h
- * MÔ TẢ: Nhóm test ELF DET
+ * FILE: Job_Test.h
+ * MÔ TẢ: Nhóm test ELF JOB
  ******************************************************************************/
 
-#ifndef ELF_DET_TEST_H
-#define ELF_DET_TEST_H
+#ifndef JOB_TEST_H
+#define JOB_TEST_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,10 +14,10 @@ extern "C" {
  * HÀM CÔNG KHAI
  ******************************************************************************/
 
-void ELF_Det_Test(void);
+void Job_Test(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* ELF_DET_TEST_H */
+#endif /* JOB_TEST_H */

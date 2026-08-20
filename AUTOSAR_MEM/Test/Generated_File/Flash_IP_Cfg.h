@@ -18,7 +18,7 @@
 #define FLASH_IP_PREFETCH_ENABLE      (STD_ON)
 #define FLASH_IP_ICACHE_ENABLE        (STD_ON)
 #define FLASH_IP_DCACHE_ENABLE        (STD_ON)
-#define FLASH_IP_TIMEOUT_VALUE        (7777777777UL)
+#define FLASH_IP_TIMEOUT_VALUE        (1048575UL)
 #define FLASH_IP_PSIZE                FLASH_IP_PSIZE_X32
 
 /* --- Derived Configuration (tự động tính từ GUI) --- */

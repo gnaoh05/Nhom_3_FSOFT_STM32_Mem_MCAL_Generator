@@ -1,402 +1,391 @@
-#include <Stm32F401_BareMetal.h>
 #include "Flash_IP.h"
+#include "Flash_IP_HwAccess.h"
 
-#define FLASH_ACR_LATENCY_MASK        0x7UL
-#define FLASH_ACR_PRFTEN              (1UL << 8)
-#define FLASH_SR_RDERR                (1UL << 8)
+/* Global driver internal state */
+static Flash_IP_StatusType Flash_IP_DriverState = FLASH_IP_UNINITIALIZED;
 
-#define FLASH_IP_SR_ERROR_FLAGS \
-        (STM32_FLASH_SR_OPERR | STM32_FLASH_SR_WRPERR | STM32_FLASH_SR_PGAERR | \
-         STM32_FLASH_SR_PGPERR | STM32_FLASH_SR_PGSERR | FLASH_SR_RDERR)
-#define FLASH_IP_SR_CLEAR_FLAGS       (STM32_FLASH_SR_EOP | FLASH_IP_SR_ERROR_FLAGS)
-#define FLASH_IP_KEY1                 0x45670123UL
-#define FLASH_IP_KEY2                 0xCDEF89ABUL
+/* Global timeout counter variable */
+static uint32 Flash_IP_TimeoutCounter = 0U; 
 
-#if (FLASH_IP_REGISTER_BASE_ADDRESS != STM32_FLASH_REG_BASE)
-#error "Flash_IP_Cfg register base does not match the STM32F401 bare-metal register map."
-#endif
-
-typedef enum
+/**
+ * @brief Initializes the Flash IP driver according to the provided configuration.
+ *        If ConfigPtr is NULL_PTR, default Flash_IP_Config from Flash_IP_Cfg.c is used.
+ * 
+ * @param[in] ConfigPtr Pointer to configuration structure or NULL_PTR.
+ */
+void Flash_IP_Init(const Flash_IP_ConfigType *ConfigPtr) 
 {
-    FLASH_IP_OP_NONE = 0,
-    FLASH_IP_OP_PROGRAM,
-    FLASH_IP_OP_ERASE
-} Flash_IP_OperationType;
+    const Flash_IP_ConfigType *activeConfigPtr = ConfigPtr;
 
-static volatile Flash_IP_StatusType Flash_IP_Status = FLASH_IP_IDLE;
-static Flash_IP_OperationType       Flash_IP_Operation = FLASH_IP_OP_NONE;
-static const uint8*                 Flash_IP_SourcePtr;
-static uint32                       Flash_IP_TargetAddress;
-static uint32                       Flash_IP_RemainingLength;
-static uint32                       Flash_IP_TimeoutCounter;
-static boolean                      Flash_IP_CancelRequested;
-
-static uint32 Flash_IP_ProgramUnitSize(void)
-{
-    return (uint32)(1UL << (uint32)FLASH_IP_PSIZE);
-}
-
-static boolean Flash_IP_IsRangeValid(uint32 address, uint32 length)
-{
-    const uint32 flashEnd = FLASH_IP_BASE_ADDRESS + FLASH_IP_TOTAL_SIZE;
-
-    return (boolean)((length > 0u) &&
-                     (address >= FLASH_IP_BASE_ADDRESS) &&
-                     (address < flashEnd) &&
-                     (length <= (flashEnd - address)));
-}
-
-static void Flash_IP_Unlock(void)
-{
-    if ((STM32_FLASH->CR & STM32_FLASH_CR_LOCK) != 0u)
+    /* Fallback sang cấu hình mặc định từ Flash_IP_Cfg.c nếu truyền NULL_PTR */
+    if (activeConfigPtr == NULL_PTR) 
     {
-        STM32_FLASH->KEYR = FLASH_IP_KEY1;
-        STM32_FLASH->KEYR = FLASH_IP_KEY2;
+        activeConfigPtr = &Flash_IP_Config;
     }
-}
-
-static void Flash_IP_Lock(void)
-{
-    STM32_FLASH->CR |= STM32_FLASH_CR_LOCK;
-}
-
-static void Flash_IP_ClearFlags(void)
-{
-    STM32_FLASH->SR = FLASH_IP_SR_CLEAR_FLAGS;
-}
-
-static void Flash_IP_ClearOperationBits(void)
-{
-    STM32_FLASH->CR &= ~(STM32_FLASH_CR_PG |
-                         STM32_FLASH_CR_SER |
-                         STM32_FLASH_CR_MER |
-                         STM32_FLASH_CR_SNB |
-                         STM32_FLASH_CR_EOPIE |
-                         STM32_FLASH_CR_ERRIE);
-}
-
-static void Flash_IP_RefreshCaches(void)
-{
-    uint32 acr = STM32_FLASH->ACR;
-    uint32 enabled = acr & (STM32_FLASH_ACR_ICEN | STM32_FLASH_ACR_DCEN);
-
-    STM32_FLASH->ACR = acr & ~(STM32_FLASH_ACR_ICEN | STM32_FLASH_ACR_DCEN);
-    STM32_FLASH->ACR |= STM32_FLASH_ACR_ICRST | STM32_FLASH_ACR_DCRST;
-    STM32_FLASH->ACR &= ~(STM32_FLASH_ACR_ICRST | STM32_FLASH_ACR_DCRST);
-    STM32_FLASH->ACR |= enabled;
-}
-
-static uint64 Flash_IP_LoadLittleEndian(const uint8* source, uint32 length)
-{
-    uint64 value = 0u;
-    uint32 index;
-
-    for (index = 0u; index < length; index++)
+    else
     {
-        value |= ((uint64)source[index] << (index * 8u));
+        /* Use caller-provided configuration */
     }
 
-    return value;
+    Flash_IP_SetLatency(activeConfigPtr->latency);
+    Flash_IP_ResetCaches();
+    Flash_IP_ConfigureFeatures(activeConfigPtr->prefetchEnable,
+                               activeConfigPtr->iCacheEnable,
+                               activeConfigPtr->dCacheEnable);
+    
+    Flash_IP_DriverState = FLASH_IP_INITIALIZED;
+    Flash_IP_TimeoutCounter = 0U;
 }
 
-static void Flash_IP_TriggerProgramUnit(void)
+/**
+ * @brief De-initializes the Flash IP driver and locks Flash registers.
+ */
+void Flash_IP_DeInit(void) 
 {
-    const uint32 unitSize = Flash_IP_ProgramUnitSize();
-    const uint64 value = Flash_IP_LoadLittleEndian(Flash_IP_SourcePtr, unitSize);
+    Flash_IP_LockHw();
+    Flash_IP_DriverState = FLASH_IP_UNINITIALIZED;
+    Flash_IP_TimeoutCounter = 0U;
+}
 
-    STM32_FLASH->CR &= ~STM32_FLASH_CR_PSIZE;
-    STM32_FLASH->CR |= ((uint32)FLASH_IP_PSIZE << STM32_FLASH_CR_PSIZE_POS) |
-                       STM32_FLASH_CR_PG;
+/**
+ * @brief Unlocks Flash control registers for write/erase operations.
+ */
+void Flash_IP_Unlock(void)
+{
+    Flash_IP_UnlockHw();
+}
 
-    switch (unitSize)
+/**
+ * @brief Locks Flash control registers.
+ */
+void Flash_IP_Lock(void) 
+{
+    Flash_IP_LockHw();
+}
+
+/**
+ * @brief Retrieves the current execution status of Flash hardware operations.
+ * 
+ * @return Flash_IP_JobResultType Execution result.
+ */
+Flash_IP_JobResultType Flash_IP_GetStatus(void) 
+{
+    Flash_IP_JobResultType retVal = FLASH_IP_JOB_OK;
+    uint32 srReg = 0U;
+
+    srReg = Flash_IP_GetStatusRegister();
+
+    if (Flash_IP_IsBusy() == TRUE) 
     {
-        case 1u:
-            *(volatile uint8*)(uintptr_t)Flash_IP_TargetAddress = (uint8)value;
-            break;
-        case 2u:
-            *(volatile uint16*)(uintptr_t)Flash_IP_TargetAddress = (uint16)value;
-            break;
-        case 4u:
-            *(volatile uint32*)(uintptr_t)Flash_IP_TargetAddress = (uint32)value;
-            break;
-        case 8u:
-            *(volatile uint64*)(uintptr_t)Flash_IP_TargetAddress = value;
-            break;
-        default:
-            /* Configuration is guarded in Flash_IP_ProgramStart(). */
-            break;
-    }
-}
-
-static void Flash_IP_Finish(Flash_IP_StatusType result)
-{
-    const Flash_IP_OperationType completedOperation = Flash_IP_Operation;
-
-    Flash_IP_ClearOperationBits();
-    Flash_IP_Lock();
-
-    if ((result == FLASH_IP_OK) &&
-        ((completedOperation == FLASH_IP_OP_PROGRAM) ||
-         (completedOperation == FLASH_IP_OP_ERASE)))
-    {
-        Flash_IP_RefreshCaches();
-    }
-
-    Flash_IP_Operation = FLASH_IP_OP_NONE;
-    Flash_IP_Status = result;
-    Flash_IP_TimeoutCounter = 0u;
-    Flash_IP_CancelRequested = FALSE;
-}
-
-void Flash_IP_Init(void)
-{
-    uint32 acr = STM32_FLASH->ACR;
-
-    acr &= ~(FLASH_ACR_LATENCY_MASK | FLASH_ACR_PRFTEN |
-             STM32_FLASH_ACR_ICEN | STM32_FLASH_ACR_DCEN);
-    acr |= ((uint32)FLASH_IP_LATENCY & FLASH_ACR_LATENCY_MASK);
-
-#if (FLASH_IP_PREFETCH_ENABLE == STD_ON)
-    acr |= FLASH_ACR_PRFTEN;
-#endif
-#if (FLASH_IP_ICACHE_ENABLE == STD_ON)
-    acr |= STM32_FLASH_ACR_ICEN;
-#endif
-#if (FLASH_IP_DCACHE_ENABLE == STD_ON)
-    acr |= STM32_FLASH_ACR_DCEN;
-#endif
-
-    STM32_FLASH->ACR = acr;
-    Flash_IP_ClearOperationBits();
-    Flash_IP_ClearFlags();
-    Flash_IP_Lock();
-
-    Flash_IP_Operation = FLASH_IP_OP_NONE;
-    Flash_IP_Status = FLASH_IP_IDLE;
-    Flash_IP_TimeoutCounter = 0u;
-    Flash_IP_CancelRequested = FALSE;
-}
-
-void Flash_IP_DeInit(void)
-{
-    Flash_IP_Cancel();
-
-    if ((STM32_FLASH->SR & STM32_FLASH_SR_BSY) == 0u)
-    {
-        Flash_IP_Status = FLASH_IP_IDLE;
-    }
-}
-
-void Flash_IP_Cancel(void)
-{
-    if (Flash_IP_Status == FLASH_IP_BUSY)
-    {
-        Flash_IP_CancelRequested = TRUE;
-
-        if ((STM32_FLASH->SR & STM32_FLASH_SR_BSY) == 0u)
+        Flash_IP_TimeoutCounter++;
+        if (Flash_IP_TimeoutCounter >= FLASH_IP_TIMEOUT_MAX_TICKS) 
         {
-            Flash_IP_ClearFlags();
-            Flash_IP_Finish(FLASH_IP_ERROR);
+            Flash_IP_EndOperation();
+            Flash_IP_TimeoutCounter = 0U;
+            retVal = FLASH_IP_JOB_FAILED;
+        }
+        else
+        {
+            retVal = FLASH_IP_JOB_BUSY;
         }
     }
     else
     {
-        Flash_IP_ClearOperationBits();
-        Flash_IP_Lock();
-        Flash_IP_Operation = FLASH_IP_OP_NONE;
-    }
-}
+        Flash_IP_TimeoutCounter = 0U;
 
-Flash_IP_StatusType Flash_IP_GetStatus(void)
-{
-    return Flash_IP_Status;
-}
-
-Std_ReturnType Flash_IP_Read(uint32 address, uint8* data, uint32 length)
-{
-    uint32 index;
-
-    if ((Flash_IP_Status == FLASH_IP_BUSY) ||
-        (data == NULL_PTR) ||
-        (Flash_IP_IsRangeValid(address, length) == FALSE))
-    {
-        return E_NOT_OK;
-    }
-
-    for (index = 0u; index < length; index++)
-    {
-        data[index] = *(const volatile uint8*)(uintptr_t)(address + index);
-    }
-
-    return E_OK;
-}
-
-Std_ReturnType Flash_IP_ProgramStart(uint32 address, const uint8* data, uint32 length)
-{
-    const uint32 unitSize = Flash_IP_ProgramUnitSize();
-
-    if ((Flash_IP_Status == FLASH_IP_BUSY) ||
-        (data == NULL_PTR) ||
-        (Flash_IP_IsRangeValid(address, length) == FALSE) ||
-        ((unitSize != 1u) && (unitSize != 2u) && (unitSize != 4u) && (unitSize != 8u)) ||
-        ((address % unitSize) != 0u) ||
-        ((length % unitSize) != 0u))
-    {
-        return E_NOT_OK;
-    }
-
-    Flash_IP_Unlock();
-    if ((STM32_FLASH->CR & STM32_FLASH_CR_LOCK) != 0u)
-    {
-        return E_NOT_OK;
-    }
-
-    Flash_IP_ClearFlags();
-    Flash_IP_ClearOperationBits();
-
-    Flash_IP_SourcePtr = data;
-    Flash_IP_TargetAddress = address;
-    Flash_IP_RemainingLength = length;
-    Flash_IP_TimeoutCounter = 0u;
-    Flash_IP_CancelRequested = FALSE;
-    Flash_IP_Operation = FLASH_IP_OP_PROGRAM;
-    Flash_IP_Status = FLASH_IP_BUSY;
-
-    Flash_IP_TriggerProgramUnit();
-    return E_OK;
-}
-
-Std_ReturnType Flash_IP_EraseSectorStart(uint8 sectorNumber)
-{
-    uint32 cr;
-
-    if ((Flash_IP_Status == FLASH_IP_BUSY) || (sectorNumber >= FLASH_IP_SECTOR_COUNT))
-    {
-        return E_NOT_OK;
-    }
-
-    Flash_IP_Unlock();
-    if ((STM32_FLASH->CR & STM32_FLASH_CR_LOCK) != 0u)
-    {
-        return E_NOT_OK;
-    }
-
-    Flash_IP_ClearFlags();
-
-    /* Clear MER explicitly: MER + SER would request a mass erase on STM32F401. */
-    cr = STM32_FLASH->CR;
-    cr &= ~(STM32_FLASH_CR_PG | STM32_FLASH_CR_SER | STM32_FLASH_CR_MER |
-            STM32_FLASH_CR_SNB | STM32_FLASH_CR_EOPIE | STM32_FLASH_CR_ERRIE);
-    cr |= ((uint32)sectorNumber << STM32_FLASH_CR_SNB_POS) | STM32_FLASH_CR_SER;
-    STM32_FLASH->CR = cr;
-
-    Flash_IP_TimeoutCounter = 0u;
-    Flash_IP_CancelRequested = FALSE;
-    Flash_IP_Operation = FLASH_IP_OP_ERASE;
-    Flash_IP_Status = FLASH_IP_BUSY;
-
-    STM32_FLASH->CR |= STM32_FLASH_CR_STRT;
-    return E_OK;
-}
-
-void Flash_IP_MainFunction(void)
-{
-    uint32 sr;
-
-    if (Flash_IP_Status != FLASH_IP_BUSY)
-    {
-        return;
-    }
-
-    sr = STM32_FLASH->SR;
-
-    if ((sr & STM32_FLASH_SR_BSY) != 0u)
-    {
-        if (Flash_IP_TimeoutCounter < (uint32)FLASH_IP_TIMEOUT_VALUE)
+        if ((srReg & FLASH_IP_SR_RDERR) != 0U) 
         {
-            Flash_IP_TimeoutCounter++;
+            Flash_IP_ClearStatusFlags(FLASH_IP_SR_RDERR);
+            Flash_IP_EndOperation();
+            retVal = FLASH_IP_JOB_FAILED;
+        }
+        else if ((srReg & FLASH_IP_SR_WRPERR) != 0U) 
+        {
+            Flash_IP_ClearStatusFlags(FLASH_IP_SR_WRPERR);
+            Flash_IP_EndOperation();
+            retVal = FLASH_IP_WRITE_PROTECT_ERROR;
+        }
+        else if ((srReg & (FLASH_IP_SR_PGAERR | FLASH_IP_SR_PGPERR | FLASH_IP_SR_PGSERR | FLASH_IP_SR_OPERR)) != 0U) 
+        {
+            Flash_IP_ClearStatusFlags(FLASH_IP_SR_PGAERR | FLASH_IP_SR_PGPERR | FLASH_IP_SR_PGSERR | FLASH_IP_SR_OPERR);
+            Flash_IP_EndOperation();
+            retVal = FLASH_IP_ALIGNMENT_ERROR;
+        }
+        else if ((srReg & FLASH_IP_SR_EOP) != 0U) 
+        {
+            Flash_IP_ClearStatusFlags(FLASH_IP_SR_EOP);
+            Flash_IP_EndOperation();
+            Flash_IP_ResetCaches();
+            retVal = FLASH_IP_JOB_OK;
         }
         else
         {
-            /* Hardware cannot be made idle safely while BSY=1. Stop scheduling
-             * future program units and finish with ERROR as soon as BSY clears. */
-            Flash_IP_CancelRequested = TRUE;
-        }
-        return;
-    }
-
-    if ((sr & FLASH_IP_SR_ERROR_FLAGS) != 0u)
-    {
-        Flash_IP_ClearFlags();
-        Flash_IP_Finish(FLASH_IP_ERROR);
-        return;
-    }
-
-    if ((sr & STM32_FLASH_SR_EOP) != 0u)
-    {
-        STM32_FLASH->SR = STM32_FLASH_SR_EOP;
-    }
-
-    if (Flash_IP_CancelRequested == TRUE)
-    {
-        Flash_IP_Finish(FLASH_IP_ERROR);
-        return;
-    }
-
-    if (Flash_IP_Operation == FLASH_IP_OP_PROGRAM)
-    {
-        const uint32 unitSize = Flash_IP_ProgramUnitSize();
-
-        Flash_IP_SourcePtr += unitSize;
-        Flash_IP_TargetAddress += unitSize;
-        Flash_IP_RemainingLength -= unitSize;
-        Flash_IP_TimeoutCounter = 0u;
-
-        if (Flash_IP_RemainingLength == 0u)
-        {
-            Flash_IP_Finish(FLASH_IP_OK);
-        }
-        else
-        {
-            Flash_IP_TriggerProgramUnit();
+            retVal = FLASH_IP_JOB_OK;
         }
     }
-    else if (Flash_IP_Operation == FLASH_IP_OP_ERASE)
+
+    return retVal;
+}
+
+/**
+ * @brief Initiates an asynchronous sector erase sequence.
+ * 
+ * @param[in] sectorNum Index of the sector to erase.
+ * 
+ * @return Flash_IP_JobResultType Result of erase triggering.
+ */
+Flash_IP_JobResultType Flash_IP_Erase(uint8 sectorNum) 
+{
+    Flash_IP_JobResultType retVal = FLASH_IP_JOB_BUSY;
+
+    if ((Flash_IP_DriverState == FLASH_IP_UNINITIALIZED) || (sectorNum > 7U)) 
     {
-        Flash_IP_Finish(FLASH_IP_OK);
+        retVal = FLASH_IP_JOB_FAILED;
+    }
+    else if (Flash_IP_IsBusy() == TRUE) 
+    {
+        retVal = FLASH_IP_JOB_BUSY;
     }
     else
     {
-        Flash_IP_Finish(FLASH_IP_ERROR);
+        Flash_IP_ClearErrors();
+        Flash_IP_TimeoutCounter = 0U;
+        Flash_IP_StartSectorErase(sectorNum);
+        retVal = FLASH_IP_JOB_BUSY;
     }
+
+    return retVal;
 }
 
-uint8 Flash_IP_GetSectorFromAddress(uint32 address)
+/**
+ * @brief Initiates an asynchronous write operation on Flash memory.
+ * 
+ * @param[in] address   Destination physical memory address.
+ * @param[in] sourcePtr Pointer to source data buffer.
+ * @param[in] length    Number of bytes to write.
+ * 
+ * @return Flash_IP_JobResultType Result of write triggering.
+ */
+/**
+ * @brief Initiates an asynchronous write operation on Flash memory.
+ * 
+ * @param[in] address   Destination physical memory address.
+ * @param[in] sourcePtr Pointer to source data buffer.
+ * @param[in] length    Number of bytes to write.
+ * 
+ * @return Flash_IP_JobResultType Result of write triggering.
+ */
+Flash_IP_JobResultType Flash_IP_Write(uint32 address, const uint8 *sourcePtr, uint32 length) 
 {
-    uint8 sector;
+    Flash_IP_JobResultType retVal = FLASH_IP_JOB_BUSY;
 
-    for (sector = 0u; sector < FLASH_IP_SECTOR_COUNT; sector++)
+    if ((Flash_IP_DriverState == FLASH_IP_UNINITIALIZED) || (sourcePtr == NULL_PTR)) 
     {
-        const uint32 start = Flash_IP_SectorTable[sector].StartAddress;
-        const uint32 size = Flash_IP_SectorTable[sector].Size;
+        retVal = FLASH_IP_JOB_FAILED;
+    }
+    else if (((address % (uint32)FLASH_IP_WRITE_ALIGNMENT) != 0U) || 
+             ((length % (uint32)FLASH_IP_WRITE_ALIGNMENT) != 0U) || 
+             (length == 0U)) 
+    {
+        retVal = FLASH_IP_ALIGNMENT_ERROR;
+    }
+    else if (Flash_IP_IsBusy() == TRUE) 
+    {
+        retVal = FLASH_IP_JOB_BUSY;
+    }
+    else
+    {
+        Flash_IP_ClearErrors();
+        Flash_IP_TimeoutCounter = 0U;
 
-        if ((address >= start) && ((address - start) < size))
+        Flash_IP_StartProgramData(address, sourcePtr);
+        retVal = FLASH_IP_JOB_BUSY;
+    }
+
+    return retVal;
+}
+
+/**
+ * @brief Reads a memory block from Flash memory.
+ * 
+ * @param[in]  address   Source physical memory address.
+ * @param[out] targetPtr Destination buffer pointer.
+ * @param[in]  length    Number of bytes to read.
+ * 
+ * @return Flash_IP_JobResultType Result of the read operation.
+ */
+Flash_IP_JobResultType Flash_IP_Read(uint32 address, uint8 *targetPtr, uint32 length) 
+{
+    Flash_IP_JobResultType retVal = FLASH_IP_JOB_OK;
+    uint32 wordsCount = 0U;
+    uint32 remainderBytes = 0U;
+    uint32 currentAddr = 0U;
+    uint32 idx = 0U;
+    uint32 *targetPtr32 = NULL_PTR;
+    uint8 *targetPtr8 = NULL_PTR;
+
+    if ((Flash_IP_DriverState == FLASH_IP_UNINITIALIZED) || (targetPtr == NULL_PTR)) 
+    {
+        retVal = FLASH_IP_JOB_FAILED;
+    }
+    else if (Flash_IP_IsBusy() == TRUE) 
+    {
+        retVal = FLASH_IP_JOB_BUSY;
+    }
+    else
+    {
+        wordsCount = length / 4U;
+        remainderBytes = length % 4U;
+        currentAddr = address;
+        targetPtr32 = (uint32 *)(void *)targetPtr;
+
+        for (idx = 0U; idx < wordsCount; idx++) 
         {
-            return sector;
+            targetPtr32[idx] = Flash_IP_Read32(currentAddr);
+            currentAddr += 4U;
+        }
+
+        if (remainderBytes > 0U) 
+        {
+            targetPtr8 = &targetPtr[wordsCount * 4U];
+            for (idx = 0U; idx < remainderBytes; idx++) 
+            {
+                targetPtr8[idx] = Flash_IP_Read8(currentAddr + idx);
+            }
+        }
+        else
+        {
+            /* No remaining bytes */
+        }
+
+        retVal = FLASH_IP_JOB_OK;
+    }
+
+    return retVal;
+}
+
+/**
+ * @brief Checks if a memory area is blank (erased to 0xFF).
+ * 
+ * @param[in] address Starting physical address to verify.
+ * @param[in] length  Number of bytes to check.
+ * 
+ * @return Flash_IP_JobResultType Result of the blank check.
+ */
+Flash_IP_JobResultType Flash_IP_BlankCheck(uint32 address, uint32 length)
+{
+    Flash_IP_JobResultType retVal = FLASH_IP_JOB_OK;
+    uint32 wordsCount = 0U;
+    uint32 remainderBytes = 0U;
+    uint32 currentAddr = 0U;
+    uint32 idx = 0U;
+    boolean isInconsistent = FALSE;
+
+    if (Flash_IP_DriverState == FLASH_IP_UNINITIALIZED) 
+    {
+        retVal = FLASH_IP_JOB_FAILED;
+    }
+    else if (Flash_IP_IsBusy() == TRUE) 
+    {
+        retVal = FLASH_IP_JOB_BUSY;
+    }
+    else
+    {
+        wordsCount = length / 4U;
+        remainderBytes = length % 4U;
+        currentAddr = address;
+
+        for (idx = 0U; (idx < wordsCount) && (isInconsistent == FALSE); idx++) 
+        {
+            if (Flash_IP_Read32(currentAddr) != 0xFFFFFFFFU) 
+            {
+                isInconsistent = TRUE;
+            }
+            else
+            {
+                currentAddr += 4U;
+            }
+        }
+
+        if (isInconsistent == FALSE)
+        {
+            for (idx = 0U; (idx < remainderBytes) && (isInconsistent == FALSE); idx++) 
+            {
+                if (Flash_IP_Read8(currentAddr + idx) != 0xFFU) 
+                {
+                    isInconsistent = TRUE;
+                }
+                else
+                {
+                    /* Byte is blank */
+                }
+            }
+        }
+        else
+        {
+            /* Already found inconsistent word */
+        }
+
+        if (isInconsistent == TRUE)
+        {
+            retVal = FLASH_IP_INCONSISTENT;
+        }
+        else
+        {
+            retVal = FLASH_IP_JOB_OK;
         }
     }
 
-    return 0xFFu;
+    return retVal;
 }
 
-uint32 Flash_IP_GetSectorStartAddress(uint8 sectorNumber)
+/**
+ * @brief Maps a physical Flash memory address to its corresponding sector ID.
+ * 
+ * @param[in] address Target physical memory address.
+ * 
+ * @return uint8 Sector index (0 to 7), or 0xFF if out of range.
+ */
+uint8 Flash_IP_GetSectorFromAddress(uint32 address) 
 {
-    return (sectorNumber < FLASH_IP_SECTOR_COUNT) ?
-            Flash_IP_SectorTable[sectorNumber].StartAddress : 0u;
-}
+    uint8 sectorId = 0xFFU;
 
-uint32 Flash_IP_GetSectorSize(uint8 sectorNumber)
-{
-    return (sectorNumber < FLASH_IP_SECTOR_COUNT) ?
-            Flash_IP_SectorTable[sectorNumber].Size : 0u;
+    if ((address >= 0x08000000UL) && (address <= 0x08003FFFUL)) 
+    {
+        sectorId = 0U;
+    }
+    else if ((address >= 0x08004000UL) && (address <= 0x08007FFFUL)) 
+    {
+        sectorId = 1U;
+    }
+    else if ((address >= 0x08008000UL) && (address <= 0x0800BFFFUL)) 
+    {
+        sectorId = 2U;
+    }
+    else if ((address >= 0x0800C000UL) && (address <= 0x0800FFFFUL)) 
+    {
+        sectorId = 3U;
+    }
+    else if ((address >= 0x08010000UL) && (address <= 0x0801FFFFUL)) 
+    {
+        sectorId = 4U;
+    }
+    else if ((address >= 0x08020000UL) && (address <= 0x0803FFFFUL)) 
+    {
+        sectorId = 5U;
+    }
+    else if ((address >= 0x08040000UL) && (address <= 0x0805FFFFUL)) 
+    {
+        sectorId = 6U;
+    }
+    else if ((address >= 0x08060000UL) && (address <= 0x0807FFFFUL)) 
+    {
+        sectorId = 7U;
+    }
+    else
+    {
+        sectorId = 0xFFU;
+    }
+
+    return sectorId;
 }

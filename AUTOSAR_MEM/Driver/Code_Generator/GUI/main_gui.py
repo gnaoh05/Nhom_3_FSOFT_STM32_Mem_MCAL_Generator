@@ -12,9 +12,36 @@ except ImportError:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INCLUDE_TEMPLATE_DIR = os.path.abspath(os.path.join(BASE_DIR, "../templates/include"))
 SRC_TEMPLATE_DIR = os.path.abspath(os.path.join(BASE_DIR, "../templates/src"))
-OUTPUT_INCLUDE_DIR = os.path.abspath(os.path.join(BASE_DIR, "../../../Test/Generated_File/include"))
-OUTPUT_SRC_DIR = os.path.abspath(os.path.join(BASE_DIR, "../../../Test/Generated_File/src"))
+OUTPUT_DIR = os.path.abspath(os.path.join(BASE_DIR, "../../../Test/Generated_File"))
 EPD_FILE = os.path.abspath(os.path.join(BASE_DIR, "MemDriver.epd"))
+
+
+class ToolTip:
+    """Lightweight tooltip that appears on hover, similar to AUTOSAR configuration tools."""
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tip_window = None
+        widget.bind("<Enter>", self._show)
+        widget.bind("<Leave>", self._hide)
+
+    def _show(self, event=None):
+        if self.tip_window or not self.text:
+            return
+        x = self.widget.winfo_rootx() + 20
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 2
+        self.tip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        label = tk.Label(tw, text=self.text, justify="left",
+                         background="#ffffe0", relief="solid", borderwidth=1,
+                         font=("Segoe UI", 9))
+        label.pack(ipadx=4, ipady=2)
+
+    def _hide(self, event=None):
+        if self.tip_window:
+            self.tip_window.destroy()
+            self.tip_window = None
 
 class MemConfiguratorApp:
     def __init__(self, root):
@@ -26,11 +53,24 @@ class MemConfiguratorApp:
         self.ui_vars = {} # Maps container_name -> { param_name: tk.Variable }
         self.list_data = {} # Maps container_name -> { list_name: [ dicts ] }
         self.trees = {} # Maps (c_name, l_name) -> (tree_widget, headers_list)
+        # Store parameter metadata: { (container_name, param_name): { "type", "min", "max", "desc" } }
+        self.param_meta = {}
+        # Store sub-container (sector batch) parameter metadata for validation
+        # { param_name: { "type", "min", "max", "desc" } }
+        self.sector_param_meta = {}
         
         self.load_epd(EPD_FILE)
         self.setup_ui()
 
     def _parse_arxml_to_custom_tree(self, epd_path):
+        """
+        Parse AUTOSAR ARXML (.epd) file and convert to internal custom XML tree.
+        Supports:
+          - ECUC-BOOLEAN-PARAM-DEF, ECUC-INTEGER-PARAM-DEF, ECUC-FLOAT-PARAM-DEF, ECUC-ENUMERATION-PARAM-DEF
+          - MIN/MAX extraction for INTEGER and FLOAT params
+          - SUB-CONTAINERS (e.g., MemSectorBatch nested inside MemInstance)
+          - DESC extraction for parameter descriptions
+        """
         tree = ET.parse(epd_path)
         root = tree.getroot()
         ns = {'ns': 'http://autosar.org/schema/r4.0'}
@@ -45,44 +85,159 @@ class MemConfiguratorApp:
         custom_root = ET.Element("AUTOSAR_EPD", version="4.4.0")
         custom_mod = ET.SubElement(custom_root, "Module", name=mod_name)
         
-        for container in module_def.findall('.//ns:ECUC-PARAM-CONF-CONTAINER-DEF', ns):
+        # Process only top-level containers (direct children of CONTAINERS)
+        containers_elem = module_def.find('ns:CONTAINERS', ns)
+        if containers_elem is None:
+            return ET.ElementTree(custom_root)
+        
+        for container in containers_elem.findall('ns:ECUC-PARAM-CONF-CONTAINER-DEF', ns):
             c_name_elem = container.find('ns:SHORT-NAME', ns)
             if c_name_elem is None:
                 continue
             c_name = c_name_elem.text
-            custom_cont = ET.SubElement(custom_mod, "Container", name=c_name)
             
-            for param in container.findall('.//*', ns):
-                if param.tag.endswith('-PARAM-DEF'):
-                    p_name_elem = param.find('ns:SHORT-NAME', ns)
-                    if p_name_elem is None:
+            # Extract container description
+            c_desc = ""
+            c_desc_elem = container.find('ns:DESC/ns:L-2', ns)
+            if c_desc_elem is not None and c_desc_elem.text:
+                c_desc = c_desc_elem.text.strip()
+            
+            custom_cont = ET.SubElement(custom_mod, "Container", name=c_name, description=c_desc)
+            
+            # Process PARAMETERS of this container
+            params_elem = container.find('ns:PARAMETERS', ns)
+            if params_elem is not None:
+                self._parse_params(params_elem, custom_cont, c_name, ns)
+            
+            # Process SUB-CONTAINERS (e.g., MemSectorBatch inside MemInstance)
+            sub_containers_elem = container.find('ns:SUB-CONTAINERS', ns)
+            if sub_containers_elem is not None:
+                for sub_cont in sub_containers_elem.findall('ns:ECUC-PARAM-CONF-CONTAINER-DEF', ns):
+                    sc_name_elem = sub_cont.find('ns:SHORT-NAME', ns)
+                    if sc_name_elem is None:
                         continue
-                    p_name = p_name_elem.text
+                    sc_name = sc_name_elem.text
                     
-                    p_type = "STRING"
-                    if "BOOLEAN" in param.tag: p_type = "BOOLEAN"
-                    elif "INTEGER" in param.tag: p_type = "INTEGER"
-                    elif "FLOAT" in param.tag: p_type = "FLOAT"
-                    elif "ENUMERATION" in param.tag: p_type = "ENUM"
-                    
-                    default_val = ""
-                    def_elem = param.find('ns:DEFAULT-VALUE', ns)
-                    if def_elem is not None and def_elem.text:
-                        default_val = def_elem.text
+                    # Parse sub-container parameters to build List definition with headers
+                    sc_params_elem = sub_cont.find('ns:PARAMETERS', ns)
+                    if sc_params_elem is not None:
+                        # Build list element with parameter definitions as headers
+                        list_elem = ET.SubElement(custom_cont, "List", name=sc_name)
                         
-                    options = []
-                    if p_type == "ENUM":
-                        for lit in param.findall('.//ns:ECUC-ENUMERATION-LITERAL-DEF/ns:SHORT-NAME', ns):
-                            if lit.text:
-                                options.append(lit.text)
-                    
-                    attribs = {"name": p_name, "type": p_type, "default": default_val}
-                    if options:
-                        attribs["options"] = ",".join(options)
+                        for param in sc_params_elem:
+                            tag = param.tag.replace('{http://autosar.org/schema/r4.0}', '')
+                            if not tag.endswith('-PARAM-DEF'):
+                                continue
+                            
+                            p_name_elem = param.find('ns:SHORT-NAME', ns)
+                            if p_name_elem is None:
+                                continue
+                            p_name = p_name_elem.text
+                            
+                            p_type, default_val, p_min, p_max, p_desc, options = \
+                                self._extract_param_info(param, tag, ns)
+                            
+                            # Store sector param metadata for validation
+                            self.sector_param_meta[p_name] = {
+                                "type": p_type, "min": p_min, "max": p_max, "desc": p_desc
+                            }
+                            
+                            # Add column definition to List
+                            col_attribs = {"name": p_name, "type": p_type, "default": default_val}
+                            if p_min:
+                                col_attribs["min"] = p_min
+                            if p_max:
+                                col_attribs["max"] = p_max
+                            ET.SubElement(list_elem, "Column", **col_attribs)
                         
-                    ET.SubElement(custom_cont, "Parameter", **attribs)
+                        # Add default sector items for STM32F401RE
+                        default_sectors = [
+                            {"id": "0", "name": "SECTOR_0", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x08000000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "1", "name": "SECTOR_1", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x08004000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "2", "name": "SECTOR_2", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x08008000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "3", "name": "SECTOR_3", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x0800C000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "4", "name": "SECTOR_4", "MemNumberOfSectors": "1", "MemEraseSectorSize": "65536",  "MemStartAddress": "0x08010000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "5", "name": "SECTOR_5", "MemNumberOfSectors": "1", "MemEraseSectorSize": "131072", "MemStartAddress": "0x08020000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "6", "name": "SECTOR_6", "MemNumberOfSectors": "1", "MemEraseSectorSize": "131072", "MemStartAddress": "0x08040000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "7", "name": "SECTOR_7", "MemNumberOfSectors": "1", "MemEraseSectorSize": "131072", "MemStartAddress": "0x08060000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
+                        ]
+                        for sector in default_sectors:
+                            ET.SubElement(list_elem, "Item", **sector)
                     
         return ET.ElementTree(custom_root)
+
+    def _extract_param_info(self, param, tag, ns):
+        """Extract type, default, min, max, description, and enum options from an ARXML param element."""
+        p_type = "STRING"
+        if "BOOLEAN" in tag: p_type = "BOOLEAN"
+        elif "INTEGER" in tag: p_type = "INTEGER"
+        elif "FLOAT" in tag: p_type = "FLOAT"
+        elif "ENUMERATION" in tag: p_type = "ENUM"
+        
+        # Default value
+        default_val = ""
+        def_elem = param.find('ns:DEFAULT-VALUE', ns)
+        if def_elem is not None and def_elem.text:
+            default_val = def_elem.text
+        
+        # MIN/MAX for INTEGER and FLOAT
+        p_min = ""
+        p_max = ""
+        if p_type in ("INTEGER", "FLOAT"):
+            min_elem = param.find('ns:MIN', ns)
+            if min_elem is not None and min_elem.text:
+                p_min = min_elem.text
+            max_elem = param.find('ns:MAX', ns)
+            if max_elem is not None and max_elem.text:
+                p_max = max_elem.text
+        
+        # Description
+        p_desc = ""
+        desc_elem = param.find('ns:DESC/ns:L-2', ns)
+        if desc_elem is not None and desc_elem.text:
+            p_desc = desc_elem.text.strip()
+        
+        # Enum options
+        options = []
+        if p_type == "ENUM":
+            for lit in param.findall('.//ns:ECUC-ENUMERATION-LITERAL-DEF/ns:SHORT-NAME', ns):
+                if lit.text:
+                    options.append(lit.text)
+        
+        return p_type, default_val, p_min, p_max, p_desc, options
+
+    def _parse_params(self, params_elem, custom_cont, c_name, ns):
+        """Parse PARAMETERS element and add Parameter sub-elements to custom_cont."""
+        for param in params_elem:
+            tag = param.tag.replace('{http://autosar.org/schema/r4.0}', '')
+            if not tag.endswith('-PARAM-DEF'):
+                continue
+            
+            p_name_elem = param.find('ns:SHORT-NAME', ns)
+            if p_name_elem is None:
+                continue
+            p_name = p_name_elem.text
+            
+            p_type, default_val, p_min, p_max, p_desc, options = \
+                self._extract_param_info(param, tag, ns)
+            
+            # Build attributes
+            attribs = {"name": p_name, "type": p_type, "default": default_val}
+            if p_desc:
+                attribs["description"] = p_desc
+            if options:
+                attribs["options"] = ",".join(options)
+            if p_min:
+                attribs["min"] = p_min
+            if p_max:
+                attribs["max"] = p_max
+            
+            ET.SubElement(custom_cont, "Parameter", **attribs)
+            
+            # Store metadata for validation
+            self.param_meta[(c_name, p_name)] = {
+                "type": p_type, "min": p_min, "max": p_max, "desc": p_desc
+            }
 
     def load_epd(self, epd_path):
         if not os.path.exists(epd_path):
@@ -92,7 +247,7 @@ class MemConfiguratorApp:
             temp_tree = ET.parse(epd_path)
             root_tag = temp_tree.getroot().tag
             
-            if root_tag.endswith("AUTOSAR"):
+            if root_tag.endswith("AUTOSAR") or 'autosar.org' in root_tag:
                 # Parse as ARXML
                 self.epd_tree = self._parse_arxml_to_custom_tree(epd_path)
             else:
@@ -100,6 +255,49 @@ class MemConfiguratorApp:
                 self.epd_tree = temp_tree
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load EPD file:\n{e}")
+
+    def _validate_value(self, value_str, p_type, p_min, p_max, p_name):
+        """
+        Validate a parameter value against its type and range.
+        Returns (is_valid, error_message).
+        """
+        if p_type == "INTEGER":
+            try:
+                val = int(str(value_str), 0)  # Support hex (0x...) and decimal
+            except ValueError:
+                return False, f"'{p_name}': Giá trị '{value_str}' không phải số nguyên hợp lệ."
+            
+            if p_min:
+                min_val = int(p_min, 0) if p_min.startswith("0x") or p_min.startswith("0X") else int(p_min)
+                if val < min_val:
+                    return False, f"'{p_name}': Giá trị {val} nhỏ hơn MIN={min_val}."
+            if p_max:
+                max_val = int(p_max, 0) if p_max.startswith("0x") or p_max.startswith("0X") else int(p_max)
+                if val > max_val:
+                    return False, f"'{p_name}': Giá trị {val} lớn hơn MAX={max_val}."
+        
+        elif p_type == "FLOAT":
+            try:
+                val = float(value_str)
+            except ValueError:
+                return False, f"'{p_name}': Giá trị '{value_str}' không phải số thực hợp lệ."
+            
+            if p_min:
+                if val < float(p_min):
+                    return False, f"'{p_name}': Giá trị {val} nhỏ hơn MIN={p_min}."
+            if p_max:
+                if val > float(p_max):
+                    return False, f"'{p_name}': Giá trị {val} lớn hơn MAX={p_max}."
+        
+        return True, ""
+
+    def _get_range_hint(self, p_type, p_min, p_max):
+        """Build a range hint string for display, e.g. '[1..4294967295]'."""
+        if p_type in ("INTEGER", "FLOAT") and (p_min or p_max):
+            min_str = p_min if p_min else "..."
+            max_str = p_max if p_max else "..."
+            return f"[{min_str}..{max_str}]"
+        return ""
             
     def setup_ui(self):
         if not self.epd_tree:
@@ -117,7 +315,12 @@ class MemConfiguratorApp:
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
         
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        frame_id = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        
+        def _configure_canvas(event):
+            canvas.itemconfig(frame_id, width=event.width)
+            
+        canvas.bind("<Configure>", _configure_canvas)
         canvas.configure(yscrollcommand=scrollbar.set)
         
         # Bind mouse wheel for scrolling
@@ -150,6 +353,8 @@ class MemConfiguratorApp:
                 p_type = param.get("type", "STRING")
                 p_default = param.get("default", "")
                 p_desc = param.get("description", "")
+                p_min = param.get("min", "")
+                p_max = param.get("max", "")
                 
                 ttk.Label(frame, text=p_name + ":").grid(row=row_idx, column=0, padx=5, pady=5, sticky="e")
                 
@@ -167,6 +372,7 @@ class MemConfiguratorApp:
                         ttk.Label(frame, text=p_desc).grid(row=row_idx, column=2, padx=5, pady=5, sticky="w")
                     self.ui_vars[c_name][p_name] = var
                 else:
+                    # INTEGER, FLOAT, STRING, HEX
                     var = tk.StringVar(value=p_default)
                     readonly = param.get("readonly") == "true"
                     entry = ttk.Entry(frame, textvariable=var, width=30)
@@ -174,17 +380,33 @@ class MemConfiguratorApp:
                         entry.config(state="readonly")
                     entry.grid(row=row_idx, column=1, padx=5, pady=5, sticky="w")
                     
-                    desc_or_unit = param.get("unit", "")
+                    # Show only description as label (no range clutter)
                     if p_desc:
-                        desc_or_unit = p_desc
-                    if desc_or_unit:
-                        ttk.Label(frame, text=desc_or_unit).grid(row=row_idx, column=2, padx=5, pady=5, sticky="w")
+                        ttk.Label(frame, text=p_desc).grid(row=row_idx, column=2, padx=5, pady=5, sticky="w")
+                    
+                    # Tooltip shows range info on hover (like professional AUTOSAR tools)
+                    range_hint = self._get_range_hint(p_type, p_min, p_max)
+                    if range_hint:
+                        ToolTip(entry, f"{p_name}\nRange: {range_hint}")
+                    
+                    # Add FocusOut validation for INTEGER/FLOAT parameters
+                    if p_type in ("INTEGER", "FLOAT") and not readonly:
+                        def _make_validator(v, pt, pmin, pmax, pn, c=c_name):
+                            def _on_focus_out(event):
+                                val_str = v.get()
+                                if not val_str:
+                                    return
+                                is_valid, err_msg = self._validate_value(val_str, pt, pmin, pmax, pn)
+                                if not is_valid:
+                                    messagebox.showwarning("Validation Error", err_msg)
+                            return _on_focus_out
+                        entry.bind("<FocusOut>", _make_validator(var, p_type, p_min, p_max, p_name))
                         
                     self.ui_vars[c_name][p_name] = var
                     
                 row_idx += 1
                 
-            # Lists
+            # Lists (sub-containers converted to lists)
             for lst in container.findall("List"):
                 l_name = lst.get("name")
                 
@@ -254,12 +476,33 @@ class MemConfiguratorApp:
         ttk.Button(frame_actions, text="Load EPC", command=self.load_epc).pack(side="left", padx=5)
         ttk.Button(frame_actions, text="Generate Code", command=self.generate_code).pack(side="right", padx=5)
 
+    def _validate_sector_item(self, data_dict):
+        """
+        Validate all fields in a sector batch item against AUTOSAR ranges.
+        Returns (is_valid, list_of_errors).
+        """
+        errors = []
+        for p_name, val_str in data_dict.items():
+            if p_name in ("id", "name"):
+                continue
+            if p_name in self.sector_param_meta:
+                meta = self.sector_param_meta[p_name]
+                p_type = meta.get("type", "STRING")
+                p_min = meta.get("min", "")
+                p_max = meta.get("max", "")
+                
+                if val_str and p_type in ("INTEGER", "FLOAT"):
+                    is_valid, err_msg = self._validate_value(val_str, p_type, p_min, p_max, p_name)
+                    if not is_valid:
+                        errors.append(err_msg)
+        return len(errors) == 0, errors
+
     def add_tree_item(self, c_name, l_name):
         tree, headers = self.trees[(c_name, l_name)]
         
         edit_win = tk.Toplevel(self.root)
         edit_win.title("Add New Item")
-        edit_win.geometry("450x500")
+        edit_win.geometry("550x600")
         edit_win.grab_set()
         
         # Create scrollable frame for many fields
@@ -280,10 +523,26 @@ class MemConfiguratorApp:
             if h == "id":
                 default_val = str(len(tree.get_children()))
             var = tk.StringVar(value=default_val)
-            ttk.Entry(scroll_frame, textvariable=var, width=30).grid(row=idx, column=1, padx=10, pady=5, sticky="w")
+            entry = ttk.Entry(scroll_frame, textvariable=var, width=30)
+            entry.grid(row=idx, column=1, padx=10, pady=5, sticky="w")
             entries[h] = var
             
+            # Tooltip with range info on hover
+            if h in self.sector_param_meta:
+                meta = self.sector_param_meta[h]
+                range_hint = self._get_range_hint(meta.get("type", ""), meta.get("min", ""), meta.get("max", ""))
+                if range_hint:
+                    ToolTip(entry, f"{h}\nRange: {range_hint}")
+            
         def save_new():
+            # Validate before saving
+            data = {h: entries[h].get() for h in headers}
+            is_valid, errors = self._validate_sector_item(data)
+            if not is_valid:
+                messagebox.showerror("Validation Error", 
+                    "Giá trị không hợp lệ theo AUTOSAR range:\n\n" + "\n".join(errors))
+                return
+            
             new_vals = [entries[h].get() for h in headers]
             tree.insert("", "end", values=new_vals)
             edit_win.destroy()
@@ -302,7 +561,7 @@ class MemConfiguratorApp:
         
         edit_win = tk.Toplevel(self.root)
         edit_win.title("Edit Item")
-        edit_win.geometry("450x500")
+        edit_win.geometry("550x600")
         edit_win.grab_set()
         
         # Create scrollable frame for many fields
@@ -320,10 +579,26 @@ class MemConfiguratorApp:
             ttk.Label(scroll_frame, text=h + ":").grid(row=idx, column=0, padx=10, pady=5, sticky="e")
             val = current_vals[idx] if idx < len(current_vals) else ""
             var = tk.StringVar(value=val)
-            ttk.Entry(scroll_frame, textvariable=var, width=30).grid(row=idx, column=1, padx=10, pady=5, sticky="w")
+            entry = ttk.Entry(scroll_frame, textvariable=var, width=30)
+            entry.grid(row=idx, column=1, padx=10, pady=5, sticky="w")
             entries[h] = var
             
+            # Tooltip with range info on hover
+            if h in self.sector_param_meta:
+                meta = self.sector_param_meta[h]
+                range_hint = self._get_range_hint(meta.get("type", ""), meta.get("min", ""), meta.get("max", ""))
+                if range_hint:
+                    ToolTip(entry, f"{h}\nRange: {range_hint}")
+            
         def save_edit():
+            # Validate before saving
+            data = {h: entries[h].get() for h in headers}
+            is_valid, errors = self._validate_sector_item(data)
+            if not is_valid:
+                messagebox.showerror("Validation Error", 
+                    "Giá trị không hợp lệ theo AUTOSAR range:\n\n" + "\n".join(errors))
+                return
+            
             new_vals = [entries[h].get() for h in headers]
             tree.item(item_id, values=new_vals)
             edit_win.destroy()
@@ -431,36 +706,42 @@ class MemConfiguratorApp:
         
         return batches
 
-    def _validate_flash_geometry(self, sector_list, write_alignment):
-        """Reject configurations that are unsafe for the fixed STM32F401RE internal Flash."""
-        if len(sector_list) != 8:
-            raise ValueError("STM32F401RE internal Flash must contain exactly 8 sectors.")
-
-        expected_address = 0x08000000
-        for sector in sorted(sector_list, key=lambda item: int(str(item.get("MemStartAddress", "0")), 0)):
-            start = int(str(sector.get("MemStartAddress", "0")), 0)
-            size = int(str(sector.get("MemEraseSectorSize", "0")), 0)
-            page = int(str(sector.get("MemWritePageSize", "0")), 0)
-
-            if start != expected_address:
-                raise ValueError(
-                    f"Sector geometry has a gap/overlap at 0x{expected_address:08X}."
-                )
-            if size <= 0:
-                raise ValueError("Every sector must have a positive erase size.")
-            if page != write_alignment:
-                raise ValueError(
-                    f"MemWritePageSize must equal PSIZE alignment ({write_alignment} bytes)."
-                )
-            expected_address += size
-
-        if expected_address != 0x08080000:
-            raise ValueError("Sector geometry must cover exactly 512 KB (end 0x08080000).")
+    def _validate_all_params(self):
+        """
+        Validate all parameter values in the UI against their AUTOSAR ranges.
+        Returns (is_valid, list_of_errors).
+        """
+        errors = []
+        for (c_name, p_name), meta in self.param_meta.items():
+            if c_name not in self.ui_vars or p_name not in self.ui_vars[c_name]:
+                continue
+            val_str = self.ui_vars[c_name][p_name].get()
+            if not val_str:
+                continue
+            
+            p_type = meta.get("type", "STRING")
+            p_min = meta.get("min", "")
+            p_max = meta.get("max", "")
+            
+            if p_type in ("INTEGER", "FLOAT"):
+                is_valid, err_msg = self._validate_value(val_str, p_type, p_min, p_max, f"{c_name}/{p_name}")
+                if not is_valid:
+                    errors.append(err_msg)
+        
+        return len(errors) == 0, errors
 
     def save_epc(self):
         filepath = filedialog.asksaveasfilename(initialdir=BASE_DIR, initialfile="MemDriver.epc", defaultextension=".epc", filetypes=[("EPC XML Files", "*.epc"), ("All Files", "*.*")])
         if not filepath:
             return
+        
+        # Validate all params before saving
+        is_valid, errors = self._validate_all_params()
+        if not is_valid:
+            result = messagebox.askyesno("Validation Warning", 
+                "Một số giá trị ngoài AUTOSAR range:\n\n" + "\n".join(errors) + "\n\nBạn vẫn muốn lưu?")
+            if not result:
+                return
             
         root = ET.Element("AUTOSAR_EPC")
         module_epd = self.epd_tree.getroot().find("Module")
@@ -533,6 +814,27 @@ class MemConfiguratorApp:
             return
 
         # ================================================================
+        # Validate all parameters before generating code
+        # ================================================================
+        is_valid, errors = self._validate_all_params()
+        if not is_valid:
+            messagebox.showerror("Validation Error", 
+                "Không thể generate code - giá trị ngoài AUTOSAR range:\n\n" + "\n".join(errors))
+            return
+
+        # Validate sector table items too
+        for (tc_name, tl_name), (tree_widget, headers) in self.trees.items():
+            if tl_name == "MemSectorBatch":
+                sector_data = self.get_tree_data(tc_name, tl_name)
+                for i, sector in enumerate(sector_data):
+                    s_valid, s_errors = self._validate_sector_item(sector)
+                    if not s_valid:
+                        sector_name = sector.get("name", f"Row {i}")
+                        messagebox.showerror("Validation Error",
+                            f"Sector '{sector_name}' có giá trị ngoài AUTOSAR range:\n\n" + "\n".join(s_errors))
+                        return
+
+        # ================================================================
         # Build config dictionary for Jinja2
         # ================================================================
         config = {}
@@ -562,8 +864,8 @@ class MemConfiguratorApp:
         # ================================================================
         # Tạo thư mục output nếu chưa có
         # ================================================================
-        os.makedirs(OUTPUT_INCLUDE_DIR, exist_ok=True)
-        os.makedirs(OUTPUT_SRC_DIR, exist_ok=True)
+        if not os.path.exists(OUTPUT_DIR):
+            os.makedirs(OUTPUT_DIR)
 
         try:
             # ============================================================
@@ -573,7 +875,7 @@ class MemConfiguratorApp:
             
             template_mem_h = env_include.get_template("Mem_Cfg.h.template")
             mem_h_content = template_mem_h.render(config=config)
-            with open(os.path.join(OUTPUT_INCLUDE_DIR, "Mem_Cfg.h"), 'w', encoding='utf-8') as f:
+            with open(os.path.join(OUTPUT_DIR, "Mem_Cfg.h"), 'w', encoding='utf-8') as f:
                 f.write(mem_h_content)
 
             # ============================================================
@@ -589,11 +891,6 @@ class MemConfiguratorApp:
             }
             psize_val = config.get("FlashIPConfig", {}).get("FlashPSize", "PSIZE_x32")
             flash_ip_write_alignment = psize_to_alignment.get(psize_val, 4)
-
-            if config.get("MemGeneral", {}).get("MemMaxInstances", "1") != "1":
-                raise ValueError("STM32F401RE has one internal Flash instance; MemMaxInstances must be 1.")
-
-            self._validate_flash_geometry(raw_sectors, flash_ip_write_alignment)
             
             # Đếm tổng số sector từ bảng sector
             flash_ip_total_sectors = len(raw_sectors)
@@ -604,7 +901,7 @@ class MemConfiguratorApp:
                 flash_ip_write_alignment=flash_ip_write_alignment,
                 flash_ip_total_sectors=flash_ip_total_sectors
             )
-            with open(os.path.join(OUTPUT_INCLUDE_DIR, "Flash_IP_Cfg.h"), 'w', encoding='utf-8') as f:
+            with open(os.path.join(OUTPUT_DIR, "Flash_IP_Cfg.h"), 'w', encoding='utf-8') as f:
                 f.write(flash_h_content)
 
             # ============================================================
@@ -617,16 +914,14 @@ class MemConfiguratorApp:
                 config=config,
                 sector_batches=sector_batches
             )
-            with open(os.path.join(OUTPUT_SRC_DIR, "Mem_Cfg.c"), 'w', encoding='utf-8') as f:
+            with open(os.path.join(OUTPUT_DIR, "Mem_Cfg.c"), 'w', encoding='utf-8') as f:
                 f.write(mem_c_content)
 
             # ============================================================
-            # 4. Generate Flash_IP_Cfg.c from the sector-table template
+            # 4. Generate Flash_IP_Cfg.c (chỉ include header, không cần template)
             # ============================================================
-            template_flash_c = env_src.get_template("Flash_IP_Cfg.c.template")
-            flash_c_content = template_flash_c.render(sector_batches=sector_batches)
-            with open(os.path.join(OUTPUT_SRC_DIR, "Flash_IP_Cfg.c"), 'w', encoding='utf-8') as f:
-                f.write(flash_c_content)
+            with open(os.path.join(OUTPUT_DIR, "Flash_IP_Cfg.c"), 'w', encoding='utf-8') as f:
+                f.write('#include "Flash_IP_Cfg.h"\n')
 
             # ============================================================
             # Thông báo thành công
@@ -635,8 +930,7 @@ class MemConfiguratorApp:
             file_list = "\n".join([f"  ✓ {f}" for f in generated_files])
             messagebox.showinfo(
                 "Thành công", 
-                f"Đã generate {len(generated_files)} file thành công tại:\n"
-                f"Headers: {OUTPUT_INCLUDE_DIR}\nSources: {OUTPUT_SRC_DIR}\n\n{file_list}"
+                f"Đã generate {len(generated_files)} file thành công tại:\n{OUTPUT_DIR}\n\n{file_list}"
             )
         except Exception as e:
             messagebox.showerror("Lỗi Generate", f"Lỗi trong quá trình generate:\n{e}")

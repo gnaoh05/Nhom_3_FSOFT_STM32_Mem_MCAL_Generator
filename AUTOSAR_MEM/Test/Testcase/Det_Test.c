@@ -1,16 +1,16 @@
 /******************************************************************************
- * FILE: ELF_Det_Test.c
+ * FILE: Det_Test.c
  * MÔ TẢ: Test DET cho AUTOSAR Mem driver
  ******************************************************************************/
 
-#include "ELF_Det_Test.h"
+#include "Det_Test.h"
 #include "TestManager.h"
 
 /* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: section 7.3.1, p.23; [SWS_Mem_00052], p.25
  * - Kiểm tra suy ra: API được gọi trước khởi tạo phải bị từ chối với MEM_E_UNINIT.
  */
-static void ELF_DET_001(void)
+static void DET_001(void)
 {
     Mem_DataType    buffer[4];
     Std_ReturnType  retVal;
@@ -33,7 +33,7 @@ static void ELF_DET_001(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00005], p.36
  * - Kiểm tra Mem_Read() từ chối destination buffer NULL với MEM_E_PARAM_POINTER.
  */
-static void ELF_DET_002(void)
+static void DET_002(void)
 {
     Std_ReturnType retVal;
 
@@ -54,7 +54,7 @@ static void ELF_DET_002(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00006], p.36
  * - Kiểm tra Mem_Read() từ chối địa chỉ không hợp lệ với MEM_E_PARAM_ADDRESS.
  */
-static void ELF_DET_003(void)
+static void DET_003(void)
 {
     Mem_DataType   buffer[4];
     Std_ReturnType retVal;
@@ -76,7 +76,7 @@ static void ELF_DET_003(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00072], p.36
  * - Kiểm tra Mem_Read() từ chối độ dài không hợp lệ với MEM_E_PARAM_LENGTH.
  */
-static void ELF_DET_004(void)
+static void DET_004(void)
 {
     Mem_DataType   buffer[4];
     Std_ReturnType retVal;
@@ -102,7 +102,7 @@ static void ELF_DET_004(void)
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00004], p.36
  * - Kiểm tra Mem_Read() từ chối instance ID không hợp lệ với MEM_E_PARAM_INSTANCE_ID.
  */
-static void ELF_DET_005(void)
+static void DET_005(void)
 {
     Mem_DataType   buffer[4];
     Std_ReturnType retVal;
@@ -124,15 +124,15 @@ static void ELF_DET_005(void)
                                 (uint32)retVal);
 }
 
-void ELF_Det_Test(void)
+void Det_Test(void)
 {
-    TestManager_BeginGroup(TEST_ELF_DET);
+    TestManager_BeginGroup(TEST_DET);
 
-    ELF_DET_001();
-    ELF_DET_002();
-    ELF_DET_003();
-    ELF_DET_004();
-    ELF_DET_005();
+    DET_001();
+    DET_002();
+    DET_003();
+    DET_004();
+    DET_005();
 
     TestManager_EndGroup();
 }
