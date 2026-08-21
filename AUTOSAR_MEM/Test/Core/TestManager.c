@@ -812,7 +812,7 @@ boolean TestManager_CheckDet(uint8 apiId, uint8 errorId)
 
     return (boolean)((lastError.Valid      == TRUE) &&
                      (lastError.ModuleId   == MEM_MODULE_ID) &&
-                     (lastError.InstanceId == MEM_INDEX) &&
+                     (lastError.InstanceId == MEM_INDEX)/*Lỗi*/ &&
                      (lastError.ApiId      == apiId) &&
                      (lastError.ErrorId    == errorId));
 }

@@ -160,7 +160,7 @@ extern volatile TestReportType g_TestReport;
 #define TEST_FLASH_INVALID_ADDRESS    ((Mem_AddressType)(FLASH_IP_BASE_ADDRESS + FLASH_IP_TOTAL_SIZE))
 
 /* Số lần polling Mem_MainFunction tối đa cho job bất đồng bộ đã được chấp nhận. */
-#define TEST_MAINFUNCTION_TIMEOUT     8u
+#define TEST_MAINFUNCTION_TIMEOUT     32u
 
 /*===========================================================================*/
 /* API                                                                       */

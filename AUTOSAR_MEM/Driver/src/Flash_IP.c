@@ -188,6 +188,22 @@ Flash_IP_JobResultType Flash_IP_Write(uint32 address, const uint8 *sourcePtr, ui
              (length == 0U)) 
     {
         retVal = FLASH_IP_ALIGNMENT_ERROR;
+/*Lỗi 501
+Testcase yêu cầu ghi 16 byte
+RemainingLength = 16
+ChunkSize = 1
+processLen = 1
+Mem_Ipw_Write(..., Length = 1)
+Flash_IP_Write(..., length = 1)
+FLASH_IP_WRITE_ALIGNMENT = 4
+1 % 4 != 0
+FLASH_IP_ALIGNMENT_ERROR
+E_NOT_OK
+MEM_JOB_FAILED
+WRITE_001 / 0x0501 thất bại
+-> Đồng bộ MemWritePageSize với Flash_IP_Write Aligment từ 1 ->4 bằng GUI*/
+
+
     }
     else if (Flash_IP_IsBusy() == TRUE) 
     {

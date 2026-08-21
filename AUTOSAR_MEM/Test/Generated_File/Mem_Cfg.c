@@ -15,7 +15,7 @@ static const Mem_SectorBatchConfigType STM32F401RE_FlashBatches[3] = {
         .MemNumberOfSectors    = 4u,
         .MemEraseSectorSize    = 16384u, /* 16 KB */
         .MemMinReadSize        = 1u,
-        .MemWritePageSize      = 1u,
+        .MemWritePageSize      = 4u,
         .MemSpecifiedEraseCycles = 10000u
     },
 
@@ -25,7 +25,7 @@ static const Mem_SectorBatchConfigType STM32F401RE_FlashBatches[3] = {
         .MemNumberOfSectors    = 1u,
         .MemEraseSectorSize    = 65536u, /* 64 KB */
         .MemMinReadSize        = 1u,
-        .MemWritePageSize      = 1u,
+        .MemWritePageSize      = 4u,
         .MemSpecifiedEraseCycles = 10000u
     },
 
@@ -35,7 +35,7 @@ static const Mem_SectorBatchConfigType STM32F401RE_FlashBatches[3] = {
         .MemNumberOfSectors    = 3u,
         .MemEraseSectorSize    = 131072u, /* 128 KB */
         .MemMinReadSize        = 1u,
-        .MemWritePageSize      = 1u,
+        .MemWritePageSize      = 4u,
         .MemSpecifiedEraseCycles = 10000u
     }
 

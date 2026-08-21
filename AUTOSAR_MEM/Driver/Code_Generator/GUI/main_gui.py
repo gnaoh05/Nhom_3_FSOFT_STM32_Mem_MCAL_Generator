@@ -152,14 +152,14 @@ class MemConfiguratorApp:
                         
                         # Add default sector items for STM32F401RE
                         default_sectors = [
-                            {"id": "0", "name": "SECTOR_0", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x08000000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
-                            {"id": "1", "name": "SECTOR_1", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x08004000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
-                            {"id": "2", "name": "SECTOR_2", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x08008000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
-                            {"id": "3", "name": "SECTOR_3", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x0800C000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
-                            {"id": "4", "name": "SECTOR_4", "MemNumberOfSectors": "1", "MemEraseSectorSize": "65536",  "MemStartAddress": "0x08010000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
-                            {"id": "5", "name": "SECTOR_5", "MemNumberOfSectors": "1", "MemEraseSectorSize": "131072", "MemStartAddress": "0x08020000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
-                            {"id": "6", "name": "SECTOR_6", "MemNumberOfSectors": "1", "MemEraseSectorSize": "131072", "MemStartAddress": "0x08040000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
-                            {"id": "7", "name": "SECTOR_7", "MemNumberOfSectors": "1", "MemEraseSectorSize": "131072", "MemStartAddress": "0x08060000", "MemMinReadSize": "1", "MemWritePageSize": "1", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "0", "name": "SECTOR_0", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x08000000", "MemMinReadSize": "1", "MemWritePageSize": "4", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "1", "name": "SECTOR_1", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x08004000", "MemMinReadSize": "1", "MemWritePageSize": "4", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "2", "name": "SECTOR_2", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x08008000", "MemMinReadSize": "1", "MemWritePageSize": "4", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "3", "name": "SECTOR_3", "MemNumberOfSectors": "1", "MemEraseSectorSize": "16384",  "MemStartAddress": "0x0800C000", "MemMinReadSize": "1", "MemWritePageSize": "4", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "4", "name": "SECTOR_4", "MemNumberOfSectors": "1", "MemEraseSectorSize": "65536",  "MemStartAddress": "0x08010000", "MemMinReadSize": "1", "MemWritePageSize": "4", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "5", "name": "SECTOR_5", "MemNumberOfSectors": "1", "MemEraseSectorSize": "131072", "MemStartAddress": "0x08020000", "MemMinReadSize": "1", "MemWritePageSize": "4", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "6", "name": "SECTOR_6", "MemNumberOfSectors": "1", "MemEraseSectorSize": "131072", "MemStartAddress": "0x08040000", "MemMinReadSize": "1", "MemWritePageSize": "4", "MemSpecifiedEraseCycles": "10000"},
+                            {"id": "7", "name": "SECTOR_7", "MemNumberOfSectors": "1", "MemEraseSectorSize": "131072", "MemStartAddress": "0x08060000", "MemMinReadSize": "1", "MemWritePageSize": "4", "MemSpecifiedEraseCycles": "10000"},
                         ]
                         for sector in default_sectors:
                             ET.SubElement(list_elem, "Item", **sector)
@@ -646,7 +646,7 @@ class MemConfiguratorApp:
             start_addr = str(sector.get("MemStartAddress", "0"))
             start_addr_int = int(start_addr, 0)
             min_read = str(sector.get("MemMinReadSize", "1"))
-            write_page = str(sector.get("MemWritePageSize", "1"))
+            write_page = str(sector.get("MemWritePageSize", "4"))
             erase_cycles = str(sector.get("MemSpecifiedEraseCycles", "10000"))
             
             # Kiểm tra xem sector có liên tiếp và cùng kích thước với batch hiện tại không
