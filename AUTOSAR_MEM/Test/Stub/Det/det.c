@@ -1,15 +1,4 @@
 #include "det.h"
-
-/*======================================================================================
- * Development Error Tracer
- *
- * Đây là hiện thực DET tối giản dùng để tích hợp AUTOSAR Memory Driver
- * trên STM32F401RE.
- *
- * Hiện thực lưu lỗi được báo gần nhất, cho phép debugger hoặc ứng dụng kiểm tra
- * development error trong quá trình integration test.
- *=====================================================================================*/
-
 volatile Det_LastErrorType Det_LastError =
 {
     0u,
