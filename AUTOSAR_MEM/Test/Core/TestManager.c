@@ -1,8 +1,3 @@
-/******************************************************************************
- * FILE: TestManager.c
- * MÔ TẢ: Khung kiểm thử AUTOSAR MEM Driver mức thanh ghi cho STM32F401
- ******************************************************************************/
-
 #include <Stm32F401_BareMetal.h>
 #include "TestManager.h"
 
@@ -812,7 +807,7 @@ boolean TestManager_CheckDet(uint8 apiId, uint8 errorId)
 
     return (boolean)((lastError.Valid      == TRUE) &&
                      (lastError.ModuleId   == MEM_MODULE_ID) &&
-                     (lastError.InstanceId == MEM_INDEX)/*Lỗi*/ &&
+                     (lastError.InstanceId == MEM_INDEX) &&
                      (lastError.ApiId      == apiId) &&
                      (lastError.ErrorId    == errorId));
 }
@@ -830,6 +825,22 @@ MemAcc_MemJobResultType TestManager_ExecuteMainUntilDone(Mem_InstanceIdType inst
     }
 
     return result;
+}
+
+uint32 TestManager_CalculateTimeout(Mem_LengthType length, uint32 chunkSize)
+{
+    uint32 cycles = 1u;
+    if (chunkSize > 0u)
+    {
+        cycles = (uint32)((length + chunkSize - 1u) / chunkSize);
+    }
+    return cycles + 10u;
+}
+
+MemAcc_MemJobResultType TestManager_ExecuteJobUntilDone(Mem_InstanceIdType instanceId, Mem_LengthType length, uint32 chunkSize)
+{
+    uint32 timeoutTicks = TestManager_CalculateTimeout(length, chunkSize);
+    return TestManager_ExecuteMainUntilDone(instanceId, timeoutTicks);
 }
 
 boolean TestManager_IsFlashTestAreaSafe(void)

@@ -20,7 +20,9 @@ typedef enum {
     MEM_JOB_ACTION_ERASE,
     MEM_JOB_ACTION_BLANKCHECK
 } Mem_JobActionType;
-
+/*
+ * Hàm Helper: Kiểm tra Bounds, Alignment VÀ trả về ChunkSize
+ */
 typedef struct {
     Mem_JobActionType   Action;
     Mem_AddressType     CurrentAddress;      /* Địa chỉ đang tiến hành thao tác */
@@ -37,10 +39,11 @@ static Mem_JobContextType Mem_JobContext[MEM_MAX_INSTANCES];
 typedef enum {
     MEM_OP_READ,
     MEM_OP_WRITE,
-    MEM_OP_ERASE
+    MEM_OP_ERASE,
+    MEM_OP_BLANKCHECK
 } Mem_OperationType;
 
-/* 
+/*
  * Hàm Helper: Kiểm tra Bounds, Alignment VÀ trả về ChunkSize
  */
 static uint8 Mem_ValidateAddressAndLength(Mem_InstanceIdType instanceId, Mem_AddressType address, Mem_LengthType length, Mem_OperationType opType, uint32* outChunkSize) {
@@ -67,6 +70,8 @@ static uint8 Mem_ValidateAddressAndLength(Mem_InstanceIdType instanceId, Mem_Add
                 requiredAlignment = Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemWritePageSize;
             } else if (opType == MEM_OP_ERASE) {
                 requiredAlignment = Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemEraseSectorSize;
+            } else if (opType == MEM_OP_BLANKCHECK) {
+                requiredAlignment = Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemMinReadSize;
             }
             
             if ((address - batchStart) % requiredAlignment != 0u) {
@@ -77,16 +82,18 @@ static uint8 Mem_ValidateAddressAndLength(Mem_InstanceIdType instanceId, Mem_Add
                 return MEM_E_PARAM_LENGTH;
             }
             
-            /* Ghi lại kích thước khối (ChunkSize) để State Machine sử dụng */
             if (outChunkSize != NULL) {
-                *outChunkSize = requiredAlignment; 
+                if (opType == MEM_OP_BLANKCHECK) {
+                    *outChunkSize = Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemEraseSectorSize;
+                } else {
+                    *outChunkSize = requiredAlignment; 
+                }
             }
             return 0u; 
         }
     }
     return MEM_E_PARAM_ADDRESS; 
 }
-
 /* -------------------------------------------------------------------------
  * NHÓM HÀM SYNCHRONOUS
  * ------------------------------------------------------------------------- */
@@ -375,7 +382,7 @@ Std_ReturnType Mem_BlankCheck(Mem_InstanceIdType instanceId, Mem_AddressType tar
     
     /* [SWS_Mem_00024] Kiểm tra lỗi địa chỉ, độ dài vô nghĩa hoặc sai căn lề (Dùng quy tắc READ) */
     uint32 chunkSz = 0;
-    valErr = Mem_ValidateAddressAndLength(instanceId, targetAddress, length, MEM_OP_READ, &chunkSz);
+    valErr = Mem_ValidateAddressAndLength(instanceId, targetAddress, length, MEM_OP_BLANKCHECK, &chunkSz);
     if (valErr != 0u) {
         Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_BLANKCHECK_ID, valErr);
         return E_NOT_OK;
