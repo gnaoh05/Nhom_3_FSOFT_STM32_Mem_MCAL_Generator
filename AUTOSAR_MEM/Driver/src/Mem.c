@@ -166,12 +166,12 @@ void Mem_GetVersionInfo(Std_VersionInfoType* versionInfoPtr) {
 MemAcc_MemJobResultType Mem_GetJobResult(Mem_InstanceIdType instanceId) {
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
     if (Mem_InitState == MEM_UNINIT) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_GETJOBRESULT_ID, MEM_E_UNINIT);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_GETJOBRESULT_ID, MEM_E_UNINIT);
         return MEM_JOB_FAILED;
     }
     /* [SWS_Mem_00090] Kiểm tra chéo (Cross-check) Instance ID */
     if (instanceId >= MEM_MAX_INSTANCES) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_GETJOBRESULT_ID, MEM_E_PARAM_INSTANCE_ID);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_GETJOBRESULT_ID, MEM_E_PARAM_INSTANCE_ID);
         return MEM_JOB_FAILED;
     }
 #endif
@@ -182,11 +182,11 @@ MemAcc_MemJobResultType Mem_GetJobResult(Mem_InstanceIdType instanceId) {
 Std_ReturnType Mem_Suspend(Mem_InstanceIdType instanceId) {
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
     if (Mem_InitState == MEM_UNINIT) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_SUSPEND_ID, MEM_E_UNINIT);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_SUSPEND_ID, MEM_E_UNINIT);
         return E_NOT_OK;
     }
     if (instanceId >= MEM_MAX_INSTANCES) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_SUSPEND_ID, MEM_E_PARAM_INSTANCE_ID);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_SUSPEND_ID, MEM_E_PARAM_INSTANCE_ID);
         return E_NOT_OK;
     }
 #endif
@@ -198,11 +198,11 @@ Std_ReturnType Mem_Suspend(Mem_InstanceIdType instanceId) {
 Std_ReturnType Mem_Resume(Mem_InstanceIdType instanceId) {
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
     if (Mem_InitState == MEM_UNINIT) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_RESUME_ID, MEM_E_UNINIT);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_RESUME_ID, MEM_E_UNINIT);
         return E_NOT_OK;
     }
     if (instanceId >= MEM_MAX_INSTANCES) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_RESUME_ID, MEM_E_PARAM_INSTANCE_ID);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_RESUME_ID, MEM_E_PARAM_INSTANCE_ID);
         return E_NOT_OK;
     }
 #endif
@@ -214,11 +214,11 @@ Std_ReturnType Mem_Resume(Mem_InstanceIdType instanceId) {
 void Mem_PropagateError(Mem_InstanceIdType instanceId) {
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
     if (Mem_InitState == MEM_UNINIT) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_PROPAGATEERROR_ID, MEM_E_UNINIT);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_PROPAGATEERROR_ID, MEM_E_UNINIT);
         return;
     }
     if (instanceId >= MEM_MAX_INSTANCES) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_PROPAGATEERROR_ID, MEM_E_PARAM_INSTANCE_ID);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_PROPAGATEERROR_ID, MEM_E_PARAM_INSTANCE_ID);
         return;
     }
 #endif
@@ -238,17 +238,17 @@ Std_ReturnType Mem_Read(Mem_InstanceIdType instanceId, Mem_AddressType sourceAdd
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
     uint8 valErr;
     if (Mem_InitState == MEM_UNINIT) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_READ_ID, MEM_E_UNINIT);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_READ_ID, MEM_E_UNINIT);
         return E_NOT_OK;
     }
     /* [SWS_Mem_00004] Lỗi vượt biên ID */
     if (instanceId >= MEM_MAX_INSTANCES) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_READ_ID, MEM_E_PARAM_INSTANCE_ID);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_READ_ID, MEM_E_PARAM_INSTANCE_ID);
         return E_NOT_OK;
     }
     /* [SWS_Mem_00005] Lỗi con trỏ trỏ tới vùng dữ liệu rỗng */
     if (destinationDataPtr == NULL) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_READ_ID, MEM_E_PARAM_POINTER);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_READ_ID, MEM_E_PARAM_POINTER);
         return E_NOT_OK;
     }
     
@@ -256,13 +256,13 @@ Std_ReturnType Mem_Read(Mem_InstanceIdType instanceId, Mem_AddressType sourceAdd
     uint32 chunkSz = 0;
     valErr = Mem_ValidateAddressAndLength(instanceId, sourceAddress, length, MEM_OP_READ, &chunkSz);
     if (valErr != 0u) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_READ_ID, valErr);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_READ_ID, valErr);
         return E_NOT_OK;
     }
 
     /* [SWS_Mem_00007] Lỗi xung đột: Mỗi bản thể chỉ xử lý 1 Job tại 1 thời điểm */
     if (Mem_JobResults[instanceId] == MEM_JOB_PENDING) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_READ_ID, MEM_E_JOB_PENDING);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_READ_ID, MEM_E_JOB_PENDING);
         return E_NOT_OK;
     }
 #endif
@@ -282,17 +282,17 @@ Std_ReturnType Mem_Write(Mem_InstanceIdType instanceId, Mem_AddressType targetAd
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
     uint8 valErr;
     if (Mem_InitState == MEM_UNINIT) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_WRITE_ID, MEM_E_UNINIT);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_WRITE_ID, MEM_E_UNINIT);
         return E_NOT_OK;
     }
     /* [SWS_Mem_00009] Lỗi ID bản thể sai */
     if (instanceId >= MEM_MAX_INSTANCES) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_WRITE_ID, MEM_E_PARAM_INSTANCE_ID);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_WRITE_ID, MEM_E_PARAM_INSTANCE_ID);
         return E_NOT_OK;
     }
     /* [SWS_Mem_00010] Con trỏ dữ liệu đầu vào NULL */
     if (sourceDataPtr == NULL) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_WRITE_ID, MEM_E_PARAM_POINTER);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_WRITE_ID, MEM_E_PARAM_POINTER);
         return E_NOT_OK;
     }
     
@@ -300,7 +300,7 @@ Std_ReturnType Mem_Write(Mem_InstanceIdType instanceId, Mem_AddressType targetAd
     uint32 chunkSz = 0;
     valErr = Mem_ValidateAddressAndLength(instanceId, targetAddress, length, MEM_OP_WRITE, &chunkSz);
     if (valErr != 0u) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_WRITE_ID, valErr);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_WRITE_ID, valErr);
         return E_NOT_OK;
     }
 
@@ -326,12 +326,12 @@ Std_ReturnType Mem_Erase(Mem_InstanceIdType instanceId, Mem_AddressType targetAd
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
     uint8 valErr;
     if (Mem_InitState == MEM_UNINIT) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_ERASE_ID, MEM_E_UNINIT);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_ERASE_ID, MEM_E_UNINIT);
         return E_NOT_OK;
     }
     /* [SWS_Mem_00015] Kiểm tra ID bản thể */
     if (instanceId >= MEM_MAX_INSTANCES) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_ERASE_ID, MEM_E_PARAM_INSTANCE_ID);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_ERASE_ID, MEM_E_PARAM_INSTANCE_ID);
         return E_NOT_OK;
     }
     
@@ -339,13 +339,13 @@ Std_ReturnType Mem_Erase(Mem_InstanceIdType instanceId, Mem_AddressType targetAd
     uint32 chunkSz = 0;
     valErr = Mem_ValidateAddressAndLength(instanceId, targetAddress, length, MEM_OP_ERASE, &chunkSz);
     if (valErr != 0u) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_ERASE_ID, valErr);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_ERASE_ID, valErr);
         return E_NOT_OK;
     }
 
     /* [SWS_Mem_00018] Ngăn xung đột tác vụ */
     if (Mem_JobResults[instanceId] == MEM_JOB_PENDING) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_ERASE_ID, MEM_E_JOB_PENDING);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_ERASE_ID, MEM_E_JOB_PENDING);
         return E_NOT_OK;
     }
 #endif
@@ -364,12 +364,12 @@ Std_ReturnType Mem_BlankCheck(Mem_InstanceIdType instanceId, Mem_AddressType tar
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
     uint8 valErr;
     if (Mem_InitState == MEM_UNINIT) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_BLANKCHECK_ID, MEM_E_UNINIT);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_BLANKCHECK_ID, MEM_E_UNINIT);
         return E_NOT_OK;
     }
     /* [SWS_Mem_00022] Kiểm tra ID bản thể */
     if (instanceId >= MEM_MAX_INSTANCES) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_BLANKCHECK_ID, MEM_E_PARAM_INSTANCE_ID);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_BLANKCHECK_ID, MEM_E_PARAM_INSTANCE_ID);
         return E_NOT_OK;
     }
     
@@ -377,13 +377,13 @@ Std_ReturnType Mem_BlankCheck(Mem_InstanceIdType instanceId, Mem_AddressType tar
     uint32 chunkSz = 0;
     valErr = Mem_ValidateAddressAndLength(instanceId, targetAddress, length, MEM_OP_READ, &chunkSz);
     if (valErr != 0u) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_BLANKCHECK_ID, valErr);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_BLANKCHECK_ID, valErr);
         return E_NOT_OK;
     }
 
     /* [SWS_Mem_00025] Block tiến trình mới nếu đang bận */
     if (Mem_JobResults[instanceId] == MEM_JOB_PENDING) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_BLANKCHECK_ID, MEM_E_JOB_PENDING);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_BLANKCHECK_ID, MEM_E_JOB_PENDING);
         return E_NOT_OK;
     }
 #endif
@@ -401,17 +401,17 @@ Std_ReturnType Mem_BlankCheck(Mem_InstanceIdType instanceId, Mem_AddressType tar
 Std_ReturnType Mem_HwSpecificService(Mem_InstanceIdType instanceId, Mem_HwServiceIdType hwServiceId, Mem_DataType* dataPtr, Mem_LengthType* lengthPtr) {
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
     if (Mem_InitState == MEM_UNINIT) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_HWSPECIFICSERVICE_ID, MEM_E_UNINIT);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_HWSPECIFICSERVICE_ID, MEM_E_UNINIT);
         return E_NOT_OK;
     }
     /* [SWS_Mem_00026] Báo lỗi nếu sai ID phần cứng */
     if (instanceId >= MEM_MAX_INSTANCES) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_HWSPECIFICSERVICE_ID, MEM_E_PARAM_INSTANCE_ID);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_HWSPECIFICSERVICE_ID, MEM_E_PARAM_INSTANCE_ID);
         return E_NOT_OK;
     }
     /* [SWS_Mem_00027] Cấm truyền NULL cho con trỏ mang tham số đặc thù */
     if (dataPtr == NULL || lengthPtr == NULL) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_HWSPECIFICSERVICE_ID, MEM_E_PARAM_POINTER);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_HWSPECIFICSERVICE_ID, MEM_E_PARAM_POINTER);
         return E_NOT_OK;
     }
 #endif
