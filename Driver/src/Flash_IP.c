@@ -17,7 +17,6 @@ void Flash_IP_Init(const Flash_IP_ConfigType *ConfigPtr)
 {
     const Flash_IP_ConfigType *activeConfigPtr = ConfigPtr;
 
-    /* Fallback sang cấu hình mặc định từ Flash_IP_Cfg.c nếu truyền NULL_PTR */
     if (activeConfigPtr == NULL_PTR) 
     {
         activeConfigPtr = &Flash_IP_Config;
@@ -78,7 +77,7 @@ Flash_IP_JobResultType Flash_IP_GetStatus(void)
     if (Flash_IP_IsBusy() == TRUE) 
     {
         Flash_IP_TimeoutCounter++;
-        if (Flash_IP_TimeoutCounter >= FLASH_IP_TIMEOUT_MAX_TICKS) 
+        if (Flash_IP_TimeoutCounter >= (uint32)FLASH_IP_TIMEOUT_VALUE) 
         {
             Flash_IP_EndOperation();
             Flash_IP_TimeoutCounter = 0U;
@@ -138,7 +137,7 @@ Flash_IP_JobResultType Flash_IP_Erase(uint8 sectorNum)
 {
     Flash_IP_JobResultType retVal = FLASH_IP_JOB_BUSY;
 
-    if ((Flash_IP_DriverState == FLASH_IP_UNINITIALIZED) || (sectorNum > 7U)) 
+    if ((Flash_IP_DriverState == FLASH_IP_UNINITIALIZED) || (sectorNum >= FLASH_IP_TOTAL_SECTORS)) 
     {
         retVal = FLASH_IP_JOB_FAILED;
     }
@@ -157,15 +156,6 @@ Flash_IP_JobResultType Flash_IP_Erase(uint8 sectorNum)
     return retVal;
 }
 
-/**
- * @brief Initiates an asynchronous write operation on Flash memory.
- * 
- * @param[in] address   Destination physical memory address.
- * @param[in] sourcePtr Pointer to source data buffer.
- * @param[in] length    Number of bytes to write.
- * 
- * @return Flash_IP_JobResultType Result of write triggering.
- */
 /**
  * @brief Initiates an asynchronous write operation on Flash memory.
  * 

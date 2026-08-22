@@ -18,13 +18,12 @@
 #define FLASH_IP_PREFETCH_ENABLE      (STD_ON)
 #define FLASH_IP_ICACHE_ENABLE        (STD_ON)
 #define FLASH_IP_DCACHE_ENABLE        (STD_ON)
-#define FLASH_IP_TIMEOUT_VALUE        (0x000FFFFFUL)
-#define FLASH_IP_PSIZE                FLASH_IP_PSIZE_X32
+#define FLASH_IP_TIMEOUT_VALUE        (1048575UL)
+#define FLASH_IP_PSIZE                FLASH_IP_PSIZE_X8
 
 /* --- Derived Configuration (tự động tính từ GUI) --- */
-#define FLASH_IP_BASE_ADDR            (0x40023C00UL)
+#define FLASH_IP_BASE_ADDR            (1073759232UL)
 #define FLASH_IP_TOTAL_SECTORS        (8U)
-#define FLASH_IP_WRITE_ALIGNMENT      (4U)
+#define FLASH_IP_WRITE_ALIGNMENT      (1U)
 
-extern const Flash_IP_ConfigType Flash_IP_Config;
 #endif /* FLASH_IP_CFG_H */

@@ -1,6 +1,6 @@
 #include "Flash_IP_Cfg.h"
 
-/* Default configuration structure initialized from configuration macros */
+/* Default configuration structure initialized from Flash_IP_Cfg.h macros */
 const Flash_IP_ConfigType Flash_IP_Config = 
 {
     .latency        = (uint8)FLASH_IP_LATENCY,
