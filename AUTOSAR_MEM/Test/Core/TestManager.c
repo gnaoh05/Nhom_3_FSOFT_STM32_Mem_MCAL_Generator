@@ -9,20 +9,15 @@
 #include "Erase_Test.h"
 #include "BlankCheck_Test.h"
 #include "Job_Test.h"
+#include "Boundary_Test.h"
 
-
-#define TEST_REPORT_SIGNATURE    0x54455354UL
-#define TEST_INVALID_INDEX       0xFFFFFFFFUL
-#define TEST_LED_PIN_MASK        (1UL << 5)
-#define TEST_SCB_CFSR            (*(volatile uint32*)0xE000ED28UL)
-#define TEST_SCB_HFSR            (*(volatile uint32*)0xE000ED2CUL)
-#define TEST_SCB_MMFAR           (*(volatile uint32*)0xE000ED34UL)
-#define TEST_SCB_BFAR            (*(volatile uint32*)0xE000ED38UL)
-#define TEST_COREDEBUG_DHCSR      (*(volatile const uint32*)0xE000EDF0UL)
-#define TEST_COREDEBUG_C_DEBUGEN  (1UL << 0u)
-/* Run của STM32CubeIDE cũng dùng GDB server trong thời gian nạp ELF. Chờ đủ
- * lâu để Run kịp ngắt kết nối trước khi kết luận đây là một phiên Debug. */
-#define TEST_DEBUG_ATTACH_POLL_LIMIT  4000000UL
+#define TEST_REPORT_SIGNATURE       0x54455354UL
+#define TEST_INVALID_INDEX          0xFFFFFFFFUL
+#define TEST_LED_PIN_MASK           (1UL << 5u)
+#define TEST_SCB_CFSR               (*(volatile uint32*)0xE000ED28UL)
+#define TEST_SCB_HFSR               (*(volatile uint32*)0xE000ED2CUL)
+#define TEST_SCB_MMFAR              (*(volatile uint32*)0xE000ED34UL)
+#define TEST_SCB_BFAR               (*(volatile uint32*)0xE000ED38UL)
 
 extern uint32 _sidata;
 extern uint32 _sdata;
@@ -30,118 +25,116 @@ extern uint32 _edata;
 
 volatile TestReportType g_TestReport;
 
+TestSectorConfigType g_CurrentTestSector = {
+    7u,
+    0x08060000UL,
+    0x00020000UL
+};
+
+static const TestSectorConfigType g_SafeTestSectors[] = {
+    { 3u, 0x0800C000UL, 0x00004000UL }, /* Sector 3 - 16 KB  */
+    { 4u, 0x08010000UL, 0x00010000UL }, /* Sector 4 - 64 KB  */
+    { 5u, 0x08020000UL, 0x00020000UL }, /* Sector 5 - 128 KB */
+    { 6u, 0x08040000UL, 0x00020000UL }, /* Sector 6 - 128 KB */
+    { 7u, 0x08060000UL, 0x00020000UL }  /* Sector 7 - 128 KB (Mặc định) */
+};
+#define TEST_SAFE_SECTOR_COUNT (sizeof(g_SafeTestSectors) / sizeof(g_SafeTestSectors[0]))
+
 static uint32  TestManager_CurrentGroupIndex = TEST_INVALID_INDEX;
 static boolean TestManager_UartReady = FALSE;
-static boolean TestManager_DebuggerAttached = FALSE;
 
-static boolean TestManager_IsDebuggerAttached(void)
+/*===========================================================================*/
+/* 1. SECTOR MANAGEMENT                                                      */
+/*===========================================================================*/
+
+boolean TestManager_SetTargetSector(uint8 sectorId)
 {
-    return ((TEST_COREDEBUG_DHCSR & TEST_COREDEBUG_C_DEBUGEN) != 0u) ? TRUE : FALSE;
-}
-
-static boolean TestManager_DetectDebugSession(void)
-{
-    uint32 pollCount;
-
-    if (TestManager_IsDebuggerAttached() == FALSE)
+    uint32 i;
+    for (i = 0u; i < TEST_SAFE_SECTOR_COUNT; i++)
     {
-        return FALSE;
-    }
-
-    for (pollCount = 0u; pollCount < TEST_DEBUG_ATTACH_POLL_LIMIT; pollCount++)
-    {
-        if (TestManager_IsDebuggerAttached() == FALSE)
+        if (g_SafeTestSectors[i].SectorId == sectorId)
         {
-            /* Nút Run đã nạp xong ELF và GDB server đã ngắt kết nối. */
-            return FALSE;
+            g_CurrentTestSector = g_SafeTestSectors[i];
+            return TRUE;
         }
     }
-
-    /* Debugger vẫn còn kết nối sau khoảng chờ: đây là phiên Debug thực sự. */
-    return TRUE;
+    return FALSE;
 }
 
-static const char* TestManager_GetGroupName(TestGroupType group)
+uint8 TestManager_GetTargetSectorId(void)
 {
-    const char* name;
+    return g_CurrentTestSector.SectorId;
+}
 
-    switch (group)
+TestNeighborBoundsType TestManager_GetNeighborBounds(void)
+{
+    TestNeighborBoundsType bounds;
+    bounds.HasPrev = FALSE;
+    bounds.PrevTailAddress = 0u;
+    bounds.HasNext = FALSE;
+    bounds.NextHeadAddress = 0u;
+
+    switch (g_CurrentTestSector.SectorId)
     {
-        case TEST_INIT:
-            name = "INIT";
+        case 3u:
+            bounds.HasPrev = TRUE;
+            bounds.PrevTailAddress = 0x0800BFF0UL; /* 16 byte cuối Sector 2 */
+            bounds.HasNext = TRUE;
+            bounds.NextHeadAddress = 0x08010000UL; /* Đầu Sector 4 */
             break;
-        case TEST_DET:
-            name = "DET";
+        case 4u:
+            bounds.HasPrev = TRUE;
+            bounds.PrevTailAddress = 0x0800FFF0UL; /* 16 byte cuối Sector 3 */
+            bounds.HasNext = TRUE;
+            bounds.NextHeadAddress = 0x08020000UL; /* Đầu Sector 5 */
             break;
-        case TEST_STATUS:
-            name = "STATUS";
+        case 5u:
+            bounds.HasPrev = TRUE;
+            bounds.PrevTailAddress = 0x0801FFF0UL; /* 16 byte cuối Sector 4 */
+            bounds.HasNext = TRUE;
+            bounds.NextHeadAddress = 0x08040000UL; /* Đầu Sector 6 */
             break;
-        case TEST_READ:
-            name = "READ";
+        case 6u:
+            bounds.HasPrev = TRUE;
+            bounds.PrevTailAddress = 0x0803FFF0UL; /* 16 byte cuối Sector 5 */
+            bounds.HasNext = TRUE;
+            bounds.NextHeadAddress = 0x08060000UL; /* Đầu Sector 7 */
             break;
-        case TEST_WRITE:
-            name = "WRITE";
+        case 7u:
+            bounds.HasPrev = TRUE;
+            bounds.PrevTailAddress = 0x0805FFF0UL; /* 16 byte cuối Sector 6 */
+            bounds.HasNext = FALSE;
             break;
-        case TEST_ERASE:
-            name = "ERASE";
-            break;
-        case TEST_BLANKCHECK:
-            name = "BLANKCHECK";
-            break;
-        case TEST_JOB:
-            name = "JOB";
-            break;
-        case TEST_ALL_GROUPS:
-            name = "ALL";
-            break;
-        case TEST_NONE:
         default:
-            name = "NONE";
             break;
     }
 
-    return name;
+    return bounds;
 }
 
-static void TestManager_Delay(volatile uint32 cycles)
-{
-    while (cycles > 0u)
-    {
-        cycles--;
-    }
-}
+/*===========================================================================*/
+/* 2. PLATFORM & PERIPHERAL DRIVER (LED & USART2)                            */
+/*===========================================================================*/
 
 static void TestManager_LedInit(void)
 {
     STM32_RCC->AHB1ENR |= STM32_RCC_AHB1ENR_GPIOAEN;
-
     STM32_GPIOA->MODER &= ~(0x3UL << (5u * 2u));
     STM32_GPIOA->MODER |=  (0x1UL << (5u * 2u));
-    STM32_GPIOA->OTYPER &= ~TEST_LED_PIN_MASK;
-    STM32_GPIOA->OSPEEDR |= (0x3UL << (5u * 2u));
+    STM32_GPIOA->OTYPER &= ~(1UL << 5u);
+    STM32_GPIOA->OSPEEDR &= ~(0x3UL << (5u * 2u));
     STM32_GPIOA->PUPDR &= ~(0x3UL << (5u * 2u));
+    STM32_GPIOA->BSRR = (1UL << (5u + 16u));
 }
 
 static void TestManager_LedOn(void)
 {
-    STM32_GPIOA->BSRR = TEST_LED_PIN_MASK;
+    STM32_GPIOA->BSRR = (1UL << 5u);
 }
 
 static void TestManager_LedOff(void)
 {
-    STM32_GPIOA->BSRR = (TEST_LED_PIN_MASK << 16u);
-}
-
-static void TestManager_LedToggle(void)
-{
-    if ((STM32_GPIOA->ODR & TEST_LED_PIN_MASK) != 0u)
-    {
-        TestManager_LedOff();
-    }
-    else
-    {
-        TestManager_LedOn();
-    }
+    STM32_GPIOA->BSRR = (1UL << (5u + 16u));
 }
 
 static void TestManager_UartInit(void)
@@ -162,7 +155,6 @@ static void TestManager_UartInit(void)
 
     Stm32_BareMetalSystemCoreClockUpdate();
     uartDivider = (Stm32_SystemCoreClock + (TEST_UART_BAUDRATE / 2u)) / TEST_UART_BAUDRATE;
-
     if (uartDivider == 0u)
     {
         uartDivider = 1u;
@@ -180,288 +172,601 @@ static void TestManager_UartInit(void)
 #endif
 }
 
-static void TestManager_PlatformInit(void)
-{
-    TestManager_DebuggerAttached = TestManager_DetectDebugSession();
-
-#if (TEST_ENABLE_LED_OUTPUT == STD_ON)
-    TestManager_LedInit();
-    TestManager_LedOff();
-#endif
-
-#if (TEST_ENABLE_UART_OUTPUT == STD_ON)
-    if (TestManager_DebuggerAttached == FALSE)
-    {
-        TestManager_UartInit();
-    }
-    else
-    {
-        TestManager_UartReady = FALSE;
-    }
-#endif
-}
-
-static void TestManager_UartWriteChar(char ch)
+static void TestManager_UartWriteChar(char c)
 {
 #if (TEST_ENABLE_UART_OUTPUT == STD_ON)
     if (TestManager_UartReady == TRUE)
     {
+        if (c == '\n')
+        {
+            while ((STM32_USART2->SR & STM32_USART_SR_TXE) == 0u)
+            {
+            }
+            STM32_USART2->DR = (uint32)((uint8)'\r');
+        }
+
         while ((STM32_USART2->SR & STM32_USART_SR_TXE) == 0u)
         {
         }
-
-        STM32_USART2->DR = (uint8)ch;
+        STM32_USART2->DR = (uint32)((uint8)c);
     }
 #else
-    (void)ch;
+    (void)c;
 #endif
 }
 
-static void TestManager_LogString(const char* text)
+static void TestManager_UartWriteString(const char* str)
 {
-#if (TEST_ENABLE_UART_OUTPUT == STD_ON)
-    if (text != NULL_PTR)
+    if (str != NULL_PTR)
     {
-        while (*text != '\0')
+        while (*str != '\0')
         {
-            if (*text == '\n')
-            {
-                TestManager_UartWriteChar('\r');
-            }
-
-            TestManager_UartWriteChar(*text);
-            text++;
+            TestManager_UartWriteChar(*str);
+            str++;
         }
     }
-#else
-    (void)text;
-#endif
-}
-
-static void TestManager_LogUnsigned(uint32 value)
-{
-#if (TEST_ENABLE_UART_OUTPUT == STD_ON)
-    char   buffer[10];
-    uint32 index = 0u;
-
-    if (value == 0u)
-    {
-        TestManager_UartWriteChar('0');
-    }
-    else
-    {
-        while (value > 0u)
-        {
-            buffer[index] = (char)('0' + (value % 10u));
-            value /= 10u;
-            index++;
-        }
-
-        while (index > 0u)
-        {
-            index--;
-            TestManager_UartWriteChar(buffer[index]);
-        }
-    }
-#else
-    (void)value;
-#endif
-}
-
-static void TestManager_LogHex32(uint32 value)
-{
-#if (TEST_ENABLE_UART_OUTPUT == STD_ON)
-    uint32 nibbleShift;
-
-    TestManager_LogString("0x");
-
-    for (nibbleShift = 28u; ; nibbleShift -= 4u)
-    {
-        uint32 nibble = (value >> nibbleShift) & 0xFUL;
-
-        if (nibble < 10u)
-        {
-            TestManager_UartWriteChar((char)('0' + nibble));
-        }
-        else
-        {
-            TestManager_UartWriteChar((char)('A' + (nibble - 10u)));
-        }
-
-        if (nibbleShift == 0u)
-        {
-            break;
-        }
-    }
-#else
-    (void)value;
-#endif
-}
-
-static boolean TestManager_UartTryReadChar(char* ch)
-{
-    boolean available = FALSE;
-
-#if (TEST_ENABLE_UART_OUTPUT == STD_ON)
-    if ((ch != NULL_PTR) &&
-        (TestManager_UartReady == TRUE) &&
-        ((STM32_USART2->SR & STM32_USART_SR_RXNE) != 0u))
-    {
-        *ch = (char)(STM32_USART2->DR & 0xFFu);
-        available = TRUE;
-    }
-#else
-    (void)ch;
-#endif
-
-    return available;
 }
 
 static char TestManager_UartReadCharBlocking(void)
 {
-    char ch = '\0';
-
-    while (TestManager_UartTryReadChar(&ch) == FALSE)
+#if (TEST_ENABLE_UART_OUTPUT == STD_ON)
+    if (TestManager_UartReady == TRUE)
     {
+        while ((STM32_USART2->SR & STM32_USART_SR_RXNE) == 0u)
+        {
+        }
+        return (char)(STM32_USART2->DR & 0xFFu);
     }
-
-    return ch;
+#endif
+    return '\0';
 }
 
 static void TestManager_UartFlushRx(void)
 {
-    char discard;
-
-    while (TestManager_UartTryReadChar(&discard) == TRUE)
+#if (TEST_ENABLE_UART_OUTPUT == STD_ON)
+    if (TestManager_UartReady == TRUE)
     {
+        while ((STM32_USART2->SR & STM32_USART_SR_RXNE) != 0u)
+        {
+            (void)STM32_USART2->DR;
+        }
+    }
+#endif
+}
+
+static void TestManager_PlatformInit(void)
+{
+#if (TEST_ENABLE_LED_OUTPUT == STD_ON)
+    TestManager_LedInit();
+#endif
+    TestManager_UartInit();
+}
+
+/*===========================================================================*/
+/* 3. DET ERROR STATE MANAGEMENT                                             */
+/*===========================================================================*/
+
+void TestManager_ResetDetState(void)
+{
+    Det_ResetLastError();
+}
+
+boolean TestManager_HasDetError(void)
+{
+    return Det_HasError();
+}
+
+boolean TestManager_CheckDet(uint8 apiId, uint8 errorId)
+{
+    Det_LastErrorType lastError = Det_GetLastError();
+    return ((lastError.Valid == TRUE) && (lastError.ApiId == apiId) && (lastError.ErrorId == errorId)) ? TRUE : FALSE;
+}
+
+/*===========================================================================*/
+/* 4. STRING & FORMATTING LOGGERS                                            */
+/*===========================================================================*/
+
+static char TestManager_ToUpper(char c)
+{
+    if ((c >= 'a') && (c <= 'z'))
+    {
+        return (char)(c - ('a' - 'A'));
+    }
+    return c;
+}
+
+static const char* TestManager_GetGroupName(TestGroupType group)
+{
+    switch (group)
+    {
+        case TEST_INIT:       return "INIT";
+        case TEST_DET:        return "DET";
+        case TEST_STATUS:     return "STATUS";
+        case TEST_READ:       return "READ";
+        case TEST_WRITE:      return "WRITE";
+        case TEST_ERASE:      return "ERASE";
+        case TEST_BLANKCHECK: return "BLANKCHECK";
+        case TEST_JOB:        return "JOB";
+        case TEST_BOUNDARY:   return "BOUNDARY";
+        case TEST_ALL_GROUPS: return "ALL";
+        default:              return "NONE";
     }
 }
 
-static char TestManager_ToUpper(char ch)
+static void TestManager_LogString(const char* str)
 {
-    if ((ch >= 'a') && (ch <= 'z'))
-    {
-        ch = (char)(ch - ('a' - 'A'));
-    }
-
-    return ch;
+    TestManager_UartWriteString(str);
 }
 
-static void TestManager_ResetReport(void)
+static void TestManager_LogUnsigned(uint32 value)
 {
-    uint32 index;
+    char buf[12];
+    uint32 i = 0u;
 
-    g_TestReport.Signature     = TEST_REPORT_SIGNATURE;
-    g_TestReport.Completed     = FALSE;
-    g_TestReport.OverallTotal  = 0u;
-    g_TestReport.OverallPassed = 0u;
-    g_TestReport.OverallFailed = 0u;
-    g_TestReport.ActiveGroup   = TEST_NONE;
-    g_TestReport.LastFault     = TEST_FAULT_NONE;
-    g_TestReport.FaultCfsr     = 0u;
-    g_TestReport.FaultHfsr     = 0u;
-    g_TestReport.FaultMmfar    = 0u;
-    g_TestReport.FaultBfar     = 0u;
-    g_TestReport.GroupCount    = 0u;
-    g_TestReport.CaseCount     = 0u;
-    g_TestReport.FirstFailedCaseIndex = TEST_REPORT_INVALID_INDEX;
-    g_TestReport.LastFailedCaseIndex  = TEST_REPORT_INVALID_INDEX;
-    g_TestReport.DroppedCaseCount     = 0u;
-
-    for (index = 0u; index < TEST_MAX_GROUP_REPORTS; index++)
+    if (value == 0u)
     {
-        g_TestReport.GroupReports[index].GroupId = TEST_NONE;
-        g_TestReport.GroupReports[index].Total   = 0u;
-        g_TestReport.GroupReports[index].Passed  = 0u;
-        g_TestReport.GroupReports[index].Failed  = 0u;
+        TestManager_UartWriteChar('0');
+        return;
     }
 
-    for (index = 0u; index < TEST_MAX_CASE_REPORTS; index++)
+    while (value > 0u)
     {
-        g_TestReport.CaseReports[index].Sequence       = 0u;
-        g_TestReport.CaseReports[index].GroupId        = TEST_NONE;
-        g_TestReport.CaseReports[index].CaseId         = 0u;
-        g_TestReport.CaseReports[index].Result         = TEST_CASE_NOT_RUN;
-        g_TestReport.CaseReports[index].Expected       = 0u;
-        g_TestReport.CaseReports[index].Actual         = 0u;
-        g_TestReport.CaseReports[index].SourceLine     = 0u;
-        g_TestReport.CaseReports[index].DetValid       = FALSE;
-        g_TestReport.CaseReports[index].DetModuleId    = 0u;
-        g_TestReport.CaseReports[index].DetInstanceId  = 0u;
-        g_TestReport.CaseReports[index].DetApiId       = 0u;
-        g_TestReport.CaseReports[index].DetErrorId     = 0u;
-        g_TestReport.CaseReports[index].CaseName       = NULL_PTR;
-        g_TestReport.CaseReports[index].RequirementIds = NULL_PTR;
-        g_TestReport.CaseReports[index].SpecPages      = NULL_PTR;
-        g_TestReport.CaseReports[index].SourceFile     = NULL_PTR;
+        buf[i++] = (char)('0' + (value % 10u));
+        value /= 10u;
     }
 
-    TestManager_CurrentGroupIndex = TEST_INVALID_INDEX;
-}
-
-static void TestManager_LogGroupBanner(TestGroupType group)
-{
-    TestManager_LogString("\n[GROUP] ");
-    TestManager_LogString(TestManager_GetGroupName(group));
-    TestManager_LogString("\n");
-}
-
-static void TestManager_LogGroupSummary(void)
-{
-    if (TestManager_CurrentGroupIndex < g_TestReport.GroupCount)
+    while (i > 0u)
     {
-        const TestGroupReportType* summary = (const TestGroupReportType*)&g_TestReport.GroupReports[TestManager_CurrentGroupIndex];
+        TestManager_UartWriteChar(buf[--i]);
+    }
+}
 
-        TestManager_LogString("[SUMMARY] ");
-        TestManager_LogString(TestManager_GetGroupName((TestGroupType)summary->GroupId));
-        TestManager_LogString(" total=");
-        TestManager_LogUnsigned(summary->Total);
-        TestManager_LogString(" pass=");
-        TestManager_LogUnsigned(summary->Passed);
-        TestManager_LogString(" fail=");
-        TestManager_LogUnsigned(summary->Failed);
-        TestManager_LogString("\n");
+static void TestManager_LogHex32(uint32 value)
+{
+    const char hexChars[] = "0123456789ABCDEF";
+    int shift;
+
+    TestManager_UartWriteString("0x");
+    for (shift = 28; shift >= 0; shift -= 4)
+    {
+        TestManager_UartWriteChar(hexChars[(value >> (uint32)shift) & 0x0Fu]);
     }
 }
 
 static void TestManager_LogRunBanner(void)
 {
-    TestManager_LogString("\nAUTOSAR MEM test console ready\n");
-    TestManager_LogString("Flash test sector=");
-    TestManager_LogHex32((uint32)TEST_FLASH_SECTOR_ADDRESS);
-    TestManager_LogString(" size=");
-    TestManager_LogHex32((uint32)TEST_FLASH_SECTOR_LENGTH);
+    TestManager_LogString("\n========================================\n");
+    TestManager_LogString("AUTOSAR MEM Test Console Ready\n");
+    TestManager_LogString("Target: STM32F401RE Flash MCAL Driver\n");
+    TestManager_LogString("========================================\n");
+}
+
+static void TestManager_LogCaseResult(const TestCaseReportType* caseReport, const Det_LastErrorType* detSnapshot)
+{
+    TestManager_LogString("  [");
+    TestManager_LogString((caseReport->Result == TEST_CASE_PASS) ? "PASS" : "FAIL");
+    TestManager_LogString("] ");
+    TestManager_LogHex32(caseReport->CaseId);
+    TestManager_LogString(" ");
+    TestManager_LogString(caseReport->CaseName);
+    TestManager_LogString(" (req=");
+    TestManager_LogString(caseReport->RequirementIds);
+    TestManager_LogString(")");
+
+    if (caseReport->Result == TEST_CASE_FAIL)
+    {
+        TestManager_LogString(" expected=");
+        TestManager_LogHex32(caseReport->Expected);
+        TestManager_LogString(" actual=");
+        TestManager_LogHex32(caseReport->Actual);
+        if (caseReport->SourceFile != NULL_PTR)
+        {
+            TestManager_LogString(" at=");
+            TestManager_LogString(caseReport->SourceFile);
+            TestManager_LogString(":");
+            TestManager_LogUnsigned(caseReport->SourceLine);
+        }
+    }
+
+    if (detSnapshot->Valid == TRUE)
+    {
+        TestManager_LogString(" (det: api=");
+        TestManager_LogHex32((uint32)detSnapshot->ApiId);
+        TestManager_LogString(", error=");
+        TestManager_LogHex32((uint32)detSnapshot->ErrorId);
+        TestManager_LogString(")");
+    }
     TestManager_LogString("\n");
 }
 
-static void TestManager_LogFailureDetail(
-        const char* sourceFile,
-        uint32 sourceLine,
-        const Det_LastErrorType* detSnapshot)
+static void TestManager_LogGroupSummary(const TestGroupReportType* summary)
 {
-    TestManager_LogString("    [DETAIL] source=");
-    TestManager_LogString((sourceFile != NULL_PTR) ? sourceFile : "unknown");
-    TestManager_LogString(":");
-    TestManager_LogUnsigned(sourceLine);
+    TestManager_LogString("[GROUP SUMMARY] ");
+    TestManager_LogString(TestManager_GetGroupName((TestGroupType)summary->GroupId));
+    TestManager_LogString(" -> total=");
+    TestManager_LogUnsigned(summary->Total);
+    TestManager_LogString(" passed=");
+    TestManager_LogUnsigned(summary->Passed);
+    TestManager_LogString(" failed=");
+    TestManager_LogUnsigned(summary->Failed);
+    TestManager_LogString("\n");
+}
 
-    if ((detSnapshot != NULL_PTR) && (detSnapshot->Valid == TRUE))
+/*===========================================================================*/
+/* 5. REPORT & RECORDING MANAGEMENT (GIỮ NGUYÊN CẤU TRÚC BÁO CÁO)           */
+/*===========================================================================*/
+
+static void TestManager_ResetReport(void)
+{
+    uint32 i;
+
+    g_TestReport.Signature = TEST_REPORT_SIGNATURE;
+    g_TestReport.Completed = FALSE;
+    g_TestReport.OverallTotal = 0u;
+    g_TestReport.OverallPassed = 0u;
+    g_TestReport.OverallFailed = 0u;
+    g_TestReport.ActiveGroup = (uint32)TEST_NONE;
+    g_TestReport.LastFault = (uint32)TEST_FAULT_NONE;
+    g_TestReport.FaultCfsr = 0u;
+    g_TestReport.FaultHfsr = 0u;
+    g_TestReport.FaultMmfar = 0u;
+    g_TestReport.FaultBfar = 0u;
+    g_TestReport.GroupCount = 0u;
+    g_TestReport.CaseCount = 0u;
+    g_TestReport.FirstFailedCaseIndex = TEST_INVALID_INDEX;
+    g_TestReport.LastFailedCaseIndex = TEST_INVALID_INDEX;
+    g_TestReport.DroppedCaseCount = 0u;
+
+    for (i = 0u; i < TEST_MAX_GROUP_REPORTS; i++)
     {
-        TestManager_LogString(" det(module=");
-        TestManager_LogUnsigned(detSnapshot->ModuleId);
-        TestManager_LogString(",instance=");
-        TestManager_LogUnsigned(detSnapshot->InstanceId);
-        TestManager_LogString(",api=");
-        TestManager_LogHex32(detSnapshot->ApiId);
-        TestManager_LogString(",error=");
-        TestManager_LogHex32(detSnapshot->ErrorId);
-        TestManager_LogString(")");
+        g_TestReport.GroupReports[i].GroupId = (uint32)TEST_NONE;
+        g_TestReport.GroupReports[i].Total = 0u;
+        g_TestReport.GroupReports[i].Passed = 0u;
+        g_TestReport.GroupReports[i].Failed = 0u;
+    }
+
+    for (i = 0u; i < TEST_MAX_CASE_REPORTS; i++)
+    {
+        g_TestReport.CaseReports[i].Sequence = 0u;
+        g_TestReport.CaseReports[i].GroupId = (uint32)TEST_NONE;
+        g_TestReport.CaseReports[i].CaseId = 0u;
+        g_TestReport.CaseReports[i].Result = (uint32)TEST_CASE_NOT_RUN;
+        g_TestReport.CaseReports[i].Expected = 0u;
+        g_TestReport.CaseReports[i].Actual = 0u;
+        g_TestReport.CaseReports[i].SourceLine = 0u;
+        g_TestReport.CaseReports[i].DetValid = 0u;
+        g_TestReport.CaseReports[i].DetModuleId = 0u;
+        g_TestReport.CaseReports[i].DetInstanceId = 0u;
+        g_TestReport.CaseReports[i].DetApiId = 0u;
+        g_TestReport.CaseReports[i].DetErrorId = 0u;
+        g_TestReport.CaseReports[i].CaseName = "";
+        g_TestReport.CaseReports[i].RequirementIds = "";
+        g_TestReport.CaseReports[i].SpecPages = "";
+        g_TestReport.CaseReports[i].SourceFile = "";
+    }
+
+    TestManager_CurrentGroupIndex = TEST_INVALID_INDEX;
+    TestManager_ResetDetState();
+}
+
+void TestManager_BeginGroup(TestGroupType group)
+{
+    uint32 i;
+
+    g_TestReport.ActiveGroup = (uint32)group;
+    TestManager_CurrentGroupIndex = TEST_INVALID_INDEX;
+
+    for (i = 0u; i < g_TestReport.GroupCount; i++)
+    {
+        if (g_TestReport.GroupReports[i].GroupId == (uint32)group)
+        {
+            TestManager_CurrentGroupIndex = i;
+            break;
+        }
+    }
+
+    if ((TestManager_CurrentGroupIndex == TEST_INVALID_INDEX) && (g_TestReport.GroupCount < TEST_MAX_GROUP_REPORTS))
+    {
+        TestManager_CurrentGroupIndex = g_TestReport.GroupCount;
+        g_TestReport.GroupReports[TestManager_CurrentGroupIndex].GroupId = (uint32)group;
+        g_TestReport.GroupReports[TestManager_CurrentGroupIndex].Total = 0u;
+        g_TestReport.GroupReports[TestManager_CurrentGroupIndex].Passed = 0u;
+        g_TestReport.GroupReports[TestManager_CurrentGroupIndex].Failed = 0u;
+        g_TestReport.GroupCount++;
+    }
+
+    TestManager_LogString("\n[GROUP] ");
+    TestManager_LogString(TestManager_GetGroupName(group));
+    TestManager_LogString("\n");
+}
+
+void TestManager_EndGroup(void)
+{
+    if (TestManager_CurrentGroupIndex != TEST_INVALID_INDEX)
+    {
+        TestManager_LogGroupSummary((const TestGroupReportType*)&g_TestReport.GroupReports[TestManager_CurrentGroupIndex]);
+    }
+    g_TestReport.ActiveGroup = (uint32)TEST_NONE;
+    TestManager_CurrentGroupIndex = TEST_INVALID_INDEX;
+}
+
+void TestManager_RecordCaseTraceAt(
+    uint32 caseId,
+    const char* caseName,
+    const char* requirementIds,
+    const char* specPages,
+    boolean passed,
+    uint32 expected,
+    uint32 actual,
+    const char* sourceFile,
+    uint32 sourceLine)
+{
+    TestCaseReportType snapshot;
+    Det_LastErrorType  detSnapshot;
+    uint32             storedIndex;
+
+    detSnapshot = Det_GetLastError();
+
+    snapshot.Sequence = g_TestReport.OverallTotal + 1u;
+    snapshot.GroupId = g_TestReport.ActiveGroup;
+    snapshot.CaseId = caseId;
+    snapshot.Result = (passed == TRUE) ? (uint32)TEST_CASE_PASS : (uint32)TEST_CASE_FAIL;
+    snapshot.Expected = expected;
+    snapshot.Actual = actual;
+    snapshot.SourceLine = sourceLine;
+    snapshot.DetValid = (uint32)detSnapshot.Valid;
+    snapshot.DetModuleId = (uint32)detSnapshot.ModuleId;
+    snapshot.DetInstanceId = (uint32)detSnapshot.InstanceId;
+    snapshot.DetApiId = (uint32)detSnapshot.ApiId;
+    snapshot.DetErrorId = (uint32)detSnapshot.ErrorId;
+    snapshot.CaseName = (caseName != NULL_PTR) ? caseName : "";
+    snapshot.RequirementIds = (requirementIds != NULL_PTR) ? requirementIds : "";
+    snapshot.SpecPages = (specPages != NULL_PTR) ? specPages : "";
+    snapshot.SourceFile = (sourceFile != NULL_PTR) ? sourceFile : "";
+
+    g_TestReport.OverallTotal++;
+    if (passed == TRUE)
+    {
+        g_TestReport.OverallPassed++;
     }
     else
     {
-        TestManager_LogString(" det=none");
+        g_TestReport.OverallFailed++;
     }
 
+    if (TestManager_CurrentGroupIndex != TEST_INVALID_INDEX)
+    {
+        g_TestReport.GroupReports[TestManager_CurrentGroupIndex].Total++;
+        if (passed == TRUE)
+        {
+            g_TestReport.GroupReports[TestManager_CurrentGroupIndex].Passed++;
+        }
+        else
+        {
+            g_TestReport.GroupReports[TestManager_CurrentGroupIndex].Failed++;
+        }
+    }
+
+    if (g_TestReport.CaseCount < TEST_MAX_CASE_REPORTS)
+    {
+        storedIndex = g_TestReport.CaseCount;
+        g_TestReport.CaseReports[storedIndex] = snapshot;
+        g_TestReport.CaseCount++;
+
+        if (passed == FALSE)
+        {
+            if (g_TestReport.FirstFailedCaseIndex == TEST_INVALID_INDEX)
+            {
+                g_TestReport.FirstFailedCaseIndex = storedIndex;
+            }
+            g_TestReport.LastFailedCaseIndex = storedIndex;
+        }
+    }
+    else
+    {
+        g_TestReport.DroppedCaseCount++;
+    }
+
+    TestManager_LogCaseResult(&snapshot, &detSnapshot);
+    TestManager_ResetDetState();
+}
+
+void TestManager_RecordCase(uint32 caseId, const char* caseName, boolean passed, uint32 expected, uint32 actual)
+{
+    TestManager_RecordCaseTraceAt(caseId, caseName, "", "", passed, expected, actual, NULL_PTR, 0u);
+}
+
+void TestManager_ReportFault(TestFaultType fault)
+{
+    g_TestReport.LastFault = (uint32)fault;
+    g_TestReport.FaultCfsr = TEST_SCB_CFSR;
+    g_TestReport.FaultHfsr = TEST_SCB_HFSR;
+    g_TestReport.FaultMmfar = TEST_SCB_MMFAR;
+    g_TestReport.FaultBfar = TEST_SCB_BFAR;
+
+    TestManager_LogString("[FAULT] fault=");
+    TestManager_LogUnsigned((uint32)fault);
+    TestManager_LogString(" cfsr=");
+    TestManager_LogHex32(g_TestReport.FaultCfsr);
+    TestManager_LogString(" hfsr=");
+    TestManager_LogHex32(g_TestReport.FaultHfsr);
     TestManager_LogString("\n");
+
+#if (TEST_ENABLE_LED_OUTPUT == STD_ON)
+    TestManager_LedOff();
+#endif
+}
+
+/*===========================================================================*/
+/* 6. DRIVER & HARDWARE HELPERS                                              */
+/*===========================================================================*/
+
+void TestManager_PrepareDriver(void)
+{
+    TestManager_ResetDetState();
+    Mem_Init(NULL_PTR);
+}
+
+void TestManager_ShutdownDriver(void)
+{
+    Mem_DeInit();
+    TestManager_ResetDetState();
+}
+
+MemAcc_MemJobResultType TestManager_ExecuteMainUntilDone(Mem_InstanceIdType instanceId, uint32 timeoutTicks)
+{
+    MemAcc_MemJobResultType jobResult = MEM_JOB_FAILED;
+    uint32 ticks;
+
+    for (ticks = 0u; ticks < timeoutTicks; ticks++)
+    {
+        Mem_MainFunction();
+        jobResult = Mem_GetJobResult(instanceId);
+        if (jobResult != MEM_JOB_PENDING)
+        {
+            break;
+        }
+    }
+
+    return jobResult;
+}
+
+boolean TestManager_IsFlashTestAreaSafe(void)
+{
+    uint32 codeEndFlashAddress = (uint32)&_sidata + ((uint32)&_edata - (uint32)&_sdata);
+    return (g_CurrentTestSector.SectorAddress >= codeEndFlashAddress) ? TRUE : FALSE;
+}
+
+boolean TestManager_EraseTestSectorAndWait(void)
+{
+    Std_ReturnType          retVal;
+    MemAcc_MemJobResultType jobResult;
+
+    if (TestManager_IsFlashTestAreaSafe() == FALSE)
+    {
+        return FALSE;
+    }
+
+    retVal = Mem_Erase(TEST_FLASH_INSTANCE, g_CurrentTestSector.SectorAddress, g_CurrentTestSector.SectorLength);
+    if (retVal != E_OK)
+    {
+        return FALSE;
+    }
+
+    jobResult = TestManager_ExecuteMainUntilDone(TEST_FLASH_INSTANCE, TEST_MAINFUNCTION_TIMEOUT);
+    return (jobResult == MEM_JOB_OK) ? TRUE : FALSE;
+}
+
+void TestManager_FillPattern(Mem_DataType* buffer, Mem_LengthType length, uint8 seed)
+{
+    Mem_LengthType i;
+    for (i = 0u; i < length; i++)
+    {
+        buffer[i] = (Mem_DataType)(seed + (uint8)i);
+    }
+}
+
+boolean TestManager_BufferEquals(const Mem_DataType* lhs, const Mem_DataType* rhs, Mem_LengthType length)
+{
+    Mem_LengthType i;
+    for (i = 0u; i < length; i++)
+    {
+        if (lhs[i] != rhs[i])
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+void TestManager_CopyFromFlash(Mem_AddressType sourceAddress, Mem_DataType* dest, Mem_LengthType length)
+{
+    Mem_LengthType i;
+    for (i = 0u; i < length; i++)
+    {
+        dest[i] = *(const volatile Mem_DataType*)((uintptr_t)sourceAddress + (uintptr_t)i);
+    }
+}
+
+boolean TestManager_IsFlashRangeErased(Mem_AddressType address, Mem_LengthType length)
+{
+    Mem_LengthType i;
+    for (i = 0u; i < length; i++)
+    {
+        if (*(const volatile Mem_DataType*)((uintptr_t)address + (uintptr_t)i) != (Mem_DataType)MEM_ERASED_VALUE)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/*===========================================================================*/
+/* 7. INTERACTIVE UART MENU & RUNNER                                         */
+/*===========================================================================*/
+
+static void TestManager_LogSectorMenu(void)
+{
+    TestManager_LogString("\n[MENU] Chon Sector Flash de kiem thu:\n");
+    TestManager_LogString("  3 - Sector 3 (16 KB  - 0x0800C000)\n");
+    TestManager_LogString("  4 - Sector 4 (64 KB  - 0x08010000)\n");
+    TestManager_LogString("  5 - Sector 5 (128 KB - 0x08020000)\n");
+    TestManager_LogString("  6 - Sector 6 (128 KB - 0x08040000)\n");
+    TestManager_LogString("  7 - Sector 7 (128 KB - 0x08060000) [Mac dinh]\n");
+    TestManager_LogString("  (*) Chu y: KHONG THE chon Sector 0, 1, 2 vi chua Code & Vector Table!\n");
+    TestManager_LogString("Lua chon Sector (3-7, Enter de chon 7): ");
+}
+
+static void TestManager_SelectSectorInteractive(void)
+{
+    boolean valid = FALSE;
+
+    TestManager_UartFlushRx();
+    TestManager_LogSectorMenu();
+
+    while (valid == FALSE)
+    {
+        char choice = TestManager_UartReadCharBlocking();
+
+        if ((choice == '\r') || (choice == '\n'))
+        {
+            (void)TestManager_SetTargetSector(7u);
+            TestManager_LogString("7\n[OK] Chon Sector 7 (Mac dinh - 128 KB)\n");
+            valid = TRUE;
+            break;
+        }
+
+        if ((choice == ' ') || (choice == '\t'))
+        {
+            continue;
+        }
+
+        TestManager_UartWriteChar(choice);
+        TestManager_LogString("\n");
+
+        if ((choice == '0') || (choice == '1') || (choice == '2'))
+        {
+            TestManager_LogString("[ERROR] Sector 0/1/2 chua Vector Table & Code dang chay! Khong hop le.\n");
+            TestManager_LogString("Vui long chon lai (3-7): ");
+        }
+        else if ((choice >= '3') && (choice <= '7'))
+        {
+            uint8 sectorId = (uint8)(choice - '0');
+            (void)TestManager_SetTargetSector(sectorId);
+            TestManager_LogString("[OK] Da chon Sector ");
+            TestManager_LogUnsigned((uint32)sectorId);
+            TestManager_LogString(" (Address=");
+            TestManager_LogHex32((uint32)g_CurrentTestSector.SectorAddress);
+            TestManager_LogString(", Size=");
+            TestManager_LogHex32((uint32)g_CurrentTestSector.SectorLength);
+            TestManager_LogString(")\n");
+            valid = TRUE;
+        }
+        else
+        {
+            TestManager_LogString("[ERROR] Lua chon khong hop le. Vui long chon lai (3-7): ");
+        }
+    }
 }
 
 static void TestManager_LogMenu(void)
@@ -475,48 +780,27 @@ static void TestManager_LogMenu(void)
     TestManager_LogString("  6 - ERASE (flash sector test)\n");
     TestManager_LogString("  7 - BLANKCHECK (flash sector test)\n");
     TestManager_LogString("  8 - JOB\n");
+    TestManager_LogString("  9 - BOUNDARY (neighbor isolation & edge test)\n");
     TestManager_LogString("  A - ALL GROUPS\n");
-    TestManager_LogString("Choice: ");
+    TestManager_LogString("Choice (1-9, A): ");
 }
 
 static TestGroupType TestManager_GetMenuSelection(char choice)
 {
-    TestGroupType selection = TEST_NONE;
-
     switch (TestManager_ToUpper(choice))
     {
-        case '1':
-            selection = TEST_INIT;
-            break;
-        case '2':
-            selection = TEST_DET;
-            break;
-        case '3':
-            selection = TEST_STATUS;
-            break;
-        case '4':
-            selection = TEST_READ;
-            break;
-        case '5':
-            selection = TEST_WRITE;
-            break;
-        case '6':
-            selection = TEST_ERASE;
-            break;
-        case '7':
-            selection = TEST_BLANKCHECK;
-            break;
-        case '8':
-            selection = TEST_JOB;
-            break;
-        case 'A':
-            selection = TEST_ALL_GROUPS;
-            break;
-        default:
-            break;
+        case '1': return TEST_INIT;
+        case '2': return TEST_DET;
+        case '3': return TEST_STATUS;
+        case '4': return TEST_READ;
+        case '5': return TEST_WRITE;
+        case '6': return TEST_ERASE;
+        case '7': return TEST_BLANKCHECK;
+        case '8': return TEST_JOB;
+        case '9': return TEST_BOUNDARY;
+        case 'A': return TEST_ALL_GROUPS;
+        default:  return TEST_NONE;
     }
-
-    return selection;
 }
 
 static TestGroupType TestManager_SelectGroupInteractive(void)
@@ -540,10 +824,9 @@ static TestGroupType TestManager_SelectGroupInteractive(void)
         TestManager_LogString("\n");
 
         selection = TestManager_GetMenuSelection(choice);
-
         if (selection == TEST_NONE)
         {
-            TestManager_LogString("[MENU] Invalid selection. Use 1-8 or A.\n");
+            TestManager_LogString("[MENU] Invalid selection. Use 1-9 or A.\n");
         }
     }
 
@@ -554,34 +837,16 @@ static void TestManager_RunSelectedGroup(TestGroupType group)
 {
     switch (group)
     {
-        case TEST_INIT:
-            Init_Test();
-            break;
-        case TEST_DET:
-            Det_Test();
-            break;
-        case TEST_STATUS:
-            Status_Test();
-            break;
-        case TEST_READ:
-            Read_Test();
-            break;
-        case TEST_WRITE:
-            Write_Test();
-            break;
-        case TEST_ERASE:
-            Erase_Test();
-            break;
-        case TEST_BLANKCHECK:
-            BlankCheck_Test();
-            break;
-        case TEST_JOB:
-            Job_Test();
-            break;
-        case TEST_NONE:
-        case TEST_ALL_GROUPS:
-        default:
-            break;
+        case TEST_INIT:       Init_Test();       break;
+        case TEST_DET:        Det_Test();        break;
+        case TEST_STATUS:     Status_Test();     break;
+        case TEST_READ:       Read_Test();       break;
+        case TEST_WRITE:      Write_Test();      break;
+        case TEST_ERASE:      Erase_Test();      break;
+        case TEST_BLANKCHECK: BlankCheck_Test(); break;
+        case TEST_JOB:        Job_Test();        break;
+        case TEST_BOUNDARY:   Boundary_Test();   break;
+        default:                                 break;
     }
 }
 
@@ -597,6 +862,7 @@ static void TestManager_RunSelection(TestGroupType selection)
         TestManager_RunSelectedGroup(TEST_ERASE);
         TestManager_RunSelectedGroup(TEST_BLANKCHECK);
         TestManager_RunSelectedGroup(TEST_JOB);
+        TestManager_RunSelectedGroup(TEST_BOUNDARY);
     }
     else
     {
@@ -604,397 +870,46 @@ static void TestManager_RunSelection(TestGroupType selection)
     }
 }
 
-void TestManager_BeginGroup(TestGroupType group)
-{
-    uint32 nextIndex = g_TestReport.GroupCount;
-
-    g_TestReport.ActiveGroup = group;
-
-    if (nextIndex < TEST_MAX_GROUP_REPORTS)
-    {
-        g_TestReport.GroupReports[nextIndex].GroupId = group;
-        g_TestReport.GroupReports[nextIndex].Total   = 0u;
-        g_TestReport.GroupReports[nextIndex].Passed  = 0u;
-        g_TestReport.GroupReports[nextIndex].Failed  = 0u;
-
-        g_TestReport.GroupCount = nextIndex + 1u;
-        TestManager_CurrentGroupIndex = nextIndex;
-    }
-    else
-    {
-        TestManager_CurrentGroupIndex = TEST_INVALID_INDEX;
-    }
-
-    TestManager_LogGroupBanner(group);
-}
-
-void TestManager_RecordCaseTraceAt(
-        uint32 caseId,
-        const char* caseName,
-        const char* requirementIds,
-        const char* specPages,
-        boolean passed,
-        uint32 expected,
-        uint32 actual,
-        const char* sourceFile,
-        uint32 sourceLine)
-{
-    Det_LastErrorType detSnapshot = Det_GetLastError();
-    uint32 result = (passed == TRUE) ? TEST_CASE_PASS : TEST_CASE_FAIL;
-    uint32 nextCaseIndex = g_TestReport.CaseCount;
-    uint32 storedCaseIndex = TEST_REPORT_INVALID_INDEX;
-
-    g_TestReport.OverallTotal++;
-
-    if (passed == TRUE)
-    {
-        g_TestReport.OverallPassed++;
-    }
-    else
-    {
-        g_TestReport.OverallFailed++;
-    }
-
-    if (TestManager_CurrentGroupIndex < g_TestReport.GroupCount)
-    {
-        g_TestReport.GroupReports[TestManager_CurrentGroupIndex].Total++;
-
-        if (passed == TRUE)
-        {
-            g_TestReport.GroupReports[TestManager_CurrentGroupIndex].Passed++;
-        }
-        else
-        {
-            g_TestReport.GroupReports[TestManager_CurrentGroupIndex].Failed++;
-        }
-    }
-
-    if (nextCaseIndex < TEST_MAX_CASE_REPORTS)
-    {
-        g_TestReport.CaseReports[nextCaseIndex].Sequence       = g_TestReport.OverallTotal;
-        g_TestReport.CaseReports[nextCaseIndex].GroupId        = g_TestReport.ActiveGroup;
-        g_TestReport.CaseReports[nextCaseIndex].CaseId         = caseId;
-        g_TestReport.CaseReports[nextCaseIndex].Result         = result;
-        g_TestReport.CaseReports[nextCaseIndex].Expected       = expected;
-        g_TestReport.CaseReports[nextCaseIndex].Actual         = actual;
-        g_TestReport.CaseReports[nextCaseIndex].SourceLine     = sourceLine;
-        g_TestReport.CaseReports[nextCaseIndex].DetValid       = detSnapshot.Valid;
-        g_TestReport.CaseReports[nextCaseIndex].DetModuleId    = detSnapshot.ModuleId;
-        g_TestReport.CaseReports[nextCaseIndex].DetInstanceId  = detSnapshot.InstanceId;
-        g_TestReport.CaseReports[nextCaseIndex].DetApiId       = detSnapshot.ApiId;
-        g_TestReport.CaseReports[nextCaseIndex].DetErrorId     = detSnapshot.ErrorId;
-        g_TestReport.CaseReports[nextCaseIndex].CaseName       = caseName;
-        g_TestReport.CaseReports[nextCaseIndex].RequirementIds = requirementIds;
-        g_TestReport.CaseReports[nextCaseIndex].SpecPages      = specPages;
-        g_TestReport.CaseReports[nextCaseIndex].SourceFile     = sourceFile;
-        g_TestReport.CaseCount = nextCaseIndex + 1u;
-        storedCaseIndex = nextCaseIndex;
-    }
-    else
-    {
-        g_TestReport.DroppedCaseCount++;
-    }
-
-    if (passed == FALSE)
-    {
-        if (g_TestReport.FirstFailedCaseIndex == TEST_REPORT_INVALID_INDEX)
-        {
-            g_TestReport.FirstFailedCaseIndex = storedCaseIndex;
-        }
-
-        g_TestReport.LastFailedCaseIndex = storedCaseIndex;
-    }
-
-    TestManager_LogString("  [");
-    TestManager_LogString((passed == TRUE) ? "PASS" : "FAIL");
-    TestManager_LogString("] ");
-    TestManager_LogHex32(caseId);
-    TestManager_LogString(" ");
-
-    if (caseName != NULL_PTR)
-    {
-        TestManager_LogString(caseName);
-        TestManager_LogString(" ");
-    }
-
-    if ((requirementIds != NULL_PTR) && (requirementIds[0] != '\0'))
-    {
-        TestManager_LogString("req=");
-        TestManager_LogString(requirementIds);
-        TestManager_LogString(" ");
-    }
-
-    if ((specPages != NULL_PTR) && (specPages[0] != '\0'))
-    {
-        TestManager_LogString("page=");
-        TestManager_LogString(specPages);
-        TestManager_LogString(" ");
-    }
-
-    TestManager_LogString("exp=");
-    TestManager_LogHex32(expected);
-    TestManager_LogString(" act=");
-    TestManager_LogHex32(actual);
-    TestManager_LogString("\n");
-
-    if (passed == FALSE)
-    {
-        TestManager_LogFailureDetail(sourceFile, sourceLine, &detSnapshot);
-    }
-}
-
-void TestManager_RecordCase(uint32 caseId, const char* caseName, boolean passed, uint32 expected, uint32 actual)
-{
-    TestManager_RecordCaseTraceAt(caseId, caseName, NULL_PTR, NULL_PTR, passed,
-                                  expected, actual, NULL_PTR, 0u);
-}
-
-void TestManager_EndGroup(void)
-{
-    TestManager_LogGroupSummary();
-    TestManager_CurrentGroupIndex = TEST_INVALID_INDEX;
-}
-
-void TestManager_ReportFault(TestFaultType fault)
-{
-    g_TestReport.LastFault = fault;
-    g_TestReport.FaultCfsr  = TEST_SCB_CFSR;
-    g_TestReport.FaultHfsr  = TEST_SCB_HFSR;
-    g_TestReport.FaultMmfar = TEST_SCB_MMFAR;
-    g_TestReport.FaultBfar  = TEST_SCB_BFAR;
-
-    TestManager_LogString("\n[FAULT] code=");
-    TestManager_LogUnsigned((uint32)fault);
-    TestManager_LogString("\n");
-
-#if (TEST_ENABLE_LED_OUTPUT == STD_ON)
-    TestManager_LedOff();
-#endif
-}
-
-void TestManager_PrepareDriver(void)
-{
-    Det_ResetLastError();
-    Mem_Init(NULL_PTR);
-    Mem_DeInit();
-    Det_ResetLastError();
-    Mem_Init(NULL_PTR);
-    Det_ResetLastError();
-}
-
-void TestManager_ShutdownDriver(void)
-{
-    Det_ResetLastError();
-    Mem_Init(NULL_PTR);
-    Det_ResetLastError();
-    Mem_DeInit();
-    Det_ResetLastError();
-}
-
-void TestManager_ResetDetState(void)
-{
-    Det_ResetLastError();
-}
-
-boolean TestManager_HasDetError(void)
-{
-    return Det_HasError();
-}
-
-boolean TestManager_CheckDet(uint8 apiId, uint8 errorId)
-{
-    Det_LastErrorType lastError = Det_GetLastError();
-
-    return (boolean)((lastError.Valid      == TRUE) &&
-                     (lastError.ModuleId   == MEM_MODULE_ID) &&
-                     (lastError.InstanceId == MEM_INDEX) &&
-                     (lastError.ApiId      == apiId) &&
-                     (lastError.ErrorId    == errorId));
-}
-
-MemAcc_MemJobResultType TestManager_ExecuteMainUntilDone(Mem_InstanceIdType instanceId, uint32 timeoutTicks)
-{
-    MemAcc_MemJobResultType result = Mem_GetJobResult(instanceId);
-    uint32                  ticks  = 0u;
-
-    while ((result == MEM_JOB_PENDING) && (ticks < timeoutTicks))
-    {
-        Mem_MainFunction();
-        result = Mem_GetJobResult(instanceId);
-        ticks++;
-    }
-
-    return result;
-}
-
-uint32 TestManager_CalculateTimeout(Mem_LengthType length, uint32 chunkSize)
-{
-    uint32 cycles = 1u;
-    if (chunkSize > 0u)
-    {
-        cycles = (uint32)((length + chunkSize - 1u) / chunkSize);
-    }
-    return cycles + 10u;
-}
-
-MemAcc_MemJobResultType TestManager_ExecuteJobUntilDone(Mem_InstanceIdType instanceId, Mem_LengthType length, uint32 chunkSize)
-{
-    uint32 timeoutTicks = TestManager_CalculateTimeout(length, chunkSize);
-    return TestManager_ExecuteMainUntilDone(instanceId, timeoutTicks);
-}
-
-boolean TestManager_IsFlashTestAreaSafe(void)
-{
-    boolean   sectorMatch   = FALSE;
-    boolean   writeFits     = FALSE;
-    boolean   imageIsBefore = FALSE;
-    uintptr_t flashImageEnd;
-    uintptr_t dataInitSize;
-    uint16    batchIndex;
-    uint32    sectorIndex;
-
-    dataInitSize  = (uintptr_t)&_edata - (uintptr_t)&_sdata;
-    flashImageEnd = (uintptr_t)&_sidata + dataInitSize;
-
-    for (batchIndex = 0u;
-         batchIndex < Mem_ConfigData.MemInstances[TEST_FLASH_INSTANCE].MemNumberOfBatches;
-         batchIndex++)
-    {
-        const Mem_SectorBatchConfigType* batch =
-                &Mem_ConfigData.MemInstances[TEST_FLASH_INSTANCE].MemSectorBatches[batchIndex];
-
-        for (sectorIndex = 0u; sectorIndex < batch->MemNumberOfSectors; sectorIndex++)
-        {
-            uint32 sectorAddress = batch->MemStartAddress +
-                                   (sectorIndex * batch->MemEraseSectorSize);
-
-            if ((sectorAddress == (uint32)TEST_FLASH_SECTOR_ADDRESS) &&
-                (batch->MemEraseSectorSize == (uint32)TEST_FLASH_SECTOR_LENGTH))
-            {
-                sectorMatch = TRUE;
-                break;
-            }
-        }
-
-        if (sectorMatch == TRUE)
-        {
-            break;
-        }
-    }
-
-    writeFits = (boolean)((TEST_FLASH_WRITE_ADDRESS + TEST_FLASH_COMPARE_LENGTH) <=
-                          (TEST_FLASH_SECTOR_ADDRESS + TEST_FLASH_SECTOR_LENGTH));
-
-    imageIsBefore = (boolean)((uintptr_t)TEST_FLASH_SECTOR_ADDRESS >= flashImageEnd);
-
-    return (boolean)((sectorMatch == TRUE) && (writeFits == TRUE) && (imageIsBefore == TRUE));
-}
-
-boolean TestManager_EraseTestSectorAndWait(void)
-{
-    boolean                success = FALSE;
-    Std_ReturnType         retVal;
-    MemAcc_MemJobResultType result;
-
-    if (TestManager_IsFlashTestAreaSafe() == TRUE)
-    {
-        retVal = Mem_Erase(TEST_FLASH_INSTANCE, TEST_FLASH_SECTOR_ADDRESS, TEST_FLASH_SECTOR_LENGTH);
-
-        if (retVal == E_OK)
-        {
-            result = TestManager_ExecuteMainUntilDone(TEST_FLASH_INSTANCE, TEST_MAINFUNCTION_TIMEOUT);
-            success = (boolean)((result == MEM_JOB_OK) &&
-                                (TestManager_IsFlashRangeErased(TEST_FLASH_WRITE_ADDRESS, TEST_FLASH_COMPARE_LENGTH) == TRUE));
-        }
-    }
-
-    return success;
-}
-
-void TestManager_FillPattern(Mem_DataType* buffer, Mem_LengthType length, uint8 seed)
-{
-    Mem_LengthType index;
-
-    for (index = 0u; index < length; index++)
-    {
-        buffer[index] = (Mem_DataType)(seed + (uint8)(index * 13u) + 1u);
-    }
-}
-
-boolean TestManager_BufferEquals(const Mem_DataType* lhs, const Mem_DataType* rhs, Mem_LengthType length)
-{
-    boolean        matches = TRUE;
-    Mem_LengthType index;
-
-    for (index = 0u; index < length; index++)
-    {
-        if (lhs[index] != rhs[index])
-        {
-            matches = FALSE;
-            break;
-        }
-    }
-
-    return matches;
-}
-
-void TestManager_CopyFromFlash(Mem_AddressType sourceAddress, Mem_DataType* dest, Mem_LengthType length)
-{
-    Mem_LengthType index;
-
-    for (index = 0u; index < length; index++)
-    {
-        dest[index] = *(const volatile Mem_DataType*)((uintptr_t)sourceAddress + (uintptr_t)index);
-    }
-}
-
-boolean TestManager_IsFlashRangeErased(Mem_AddressType address, Mem_LengthType length)
-{
-    boolean        erased = TRUE;
-    Mem_LengthType index;
-
-    for (index = 0u; index < length; index++)
-    {
-        if (*(const volatile Mem_DataType*)((uintptr_t)address + (uintptr_t)index) != (Mem_DataType)MEM_ERASED_VALUE)
-        {
-            erased = FALSE;
-            break;
-        }
-    }
-
-    return erased;
-}
-
 void TestManager_Run(void)
 {
     TestManager_PlatformInit();
 
 #if (TEST_ENABLE_UART_MENU == STD_ON) && (TEST_ENABLE_UART_OUTPUT == STD_ON)
-    if (TestManager_DebuggerAttached == FALSE)
+    TestManager_LogRunBanner();
+    TestManager_LogString("[MENU] Interactive UART selection is enabled.\n");
+
+    for (;;)
     {
-        TestManager_LogRunBanner();
-        TestManager_LogString("[MENU] Interactive UART selection is enabled.\n");
+        TestGroupType selection = TestManager_SelectGroupInteractive();
 
-        for (;;)
+        if ((selection == TEST_WRITE) || (selection == TEST_ERASE) ||
+            (selection == TEST_BLANKCHECK) || (selection == TEST_BOUNDARY) ||
+            (selection == TEST_ALL_GROUPS))
         {
-            TestGroupType selection = TestManager_SelectGroupInteractive();
-
-            TestManager_ResetReport();
-            TestManager_LogString("[RUN] selected=");
-            TestManager_LogString(TestManager_GetGroupName(selection));
-            TestManager_LogString("\n");
-
-            TestManager_RunSelection(selection);
-            TestManager_Finish();
-            TestManager_LogString("[MENU] Run complete. Select next group.\n");
+            TestManager_SelectSectorInteractive();
         }
-    }
-#endif
 
+        TestManager_ResetReport();
+        TestManager_LogString("[RUN] selected=");
+        TestManager_LogString(TestManager_GetGroupName(selection));
+        TestManager_LogString(" (Target Sector ");
+        TestManager_LogUnsigned((uint32)g_CurrentTestSector.SectorId);
+        TestManager_LogString(", Addr=");
+        TestManager_LogHex32((uint32)g_CurrentTestSector.SectorAddress);
+        TestManager_LogString(", Size=");
+        TestManager_LogHex32((uint32)g_CurrentTestSector.SectorLength);
+        TestManager_LogString(")\n");
+
+        TestManager_RunSelection(selection);
+        TestManager_Finish();
+        TestManager_LogString("[MENU] Run complete. Select next group.\n");
+    }
+#else
     TestManager_ResetReport();
     TestManager_LogRunBanner();
     TestManager_RunSelection((TestGroupType)ACTIVE_TEST_GROUP);
     TestManager_Finish();
+#endif
 }
 
 void TestManager_Finish(void)
@@ -1011,36 +926,14 @@ void TestManager_Finish(void)
     TestManager_LogUnsigned(g_TestReport.LastFault);
     TestManager_LogString("\n");
 
-#if (TEST_ENABLE_UART_MENU == STD_ON) && (TEST_ENABLE_UART_OUTPUT == STD_ON)
-    if (TestManager_DebuggerAttached == FALSE)
-    {
 #if (TEST_ENABLE_LED_OUTPUT == STD_ON)
-        if ((g_TestReport.OverallFailed == 0u) && (g_TestReport.LastFault == TEST_FAULT_NONE))
-        {
-            TestManager_LedOn();
-        }
-        else
-        {
-            TestManager_LedOff();
-        }
-#endif
-        return;
+    if ((g_TestReport.OverallFailed == 0u) && (g_TestReport.LastFault == (uint32)TEST_FAULT_NONE))
+    {
+        TestManager_LedOn();
+    }
+    else
+    {
+        TestManager_LedOff();
     }
 #endif
-
-    for (;;)
-    {
-#if (TEST_ENABLE_LED_OUTPUT == STD_ON)
-        if ((g_TestReport.OverallFailed == 0u) && (g_TestReport.LastFault == TEST_FAULT_NONE))
-        {
-            TestManager_LedOn();
-            TestManager_Delay(400000u);
-        }
-        else
-        {
-            TestManager_LedToggle();
-            TestManager_Delay(120000u);
-        }
-#endif
-    }
 }

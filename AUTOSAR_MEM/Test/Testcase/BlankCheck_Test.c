@@ -1,8 +1,3 @@
-/******************************************************************************
- * FILE: BlankCheck_Test.c
- * MÔ TẢ: Test blank-check cho AUTOSAR Mem driver
- ******************************************************************************/
-
 #include "BlankCheck_Test.h"
 #include "TestManager.h"
 

@@ -1,8 +1,3 @@
-/******************************************************************************
- * FILE: Status_Test.c
- * MÔ TẢ: Test trạng thái job cho AUTOSAR Mem driver
- ******************************************************************************/
-
 #include "Status_Test.h"
 #include "TestManager.h"
 
@@ -24,7 +19,6 @@ static void STATUS_001(void)
                                 (uint32)MEM_JOB_OK,
                                 (uint32)jobResult);
 }
-
 /* Truy vết:
  * - AUTOSAR_CP_SWS_MemoryDriver: [SWS_Mem_10012], [SWS_Mem_00030], [SWS_Mem_00029], p.15,36
  * - Kiểm tra yêu cầu đọc bất đồng bộ được chấp nhận đổi kết quả job thành MEM_JOB_PENDING.

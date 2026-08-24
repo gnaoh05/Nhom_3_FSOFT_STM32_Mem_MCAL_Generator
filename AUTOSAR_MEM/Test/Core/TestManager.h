@@ -1,7 +1,3 @@
-/******************************************************************************
- * FILE: TestManager.h
- * MÔ TẢ: Test Manager AUTOSAR MEM Driver và hỗ trợ kiểm thử mức thanh ghi
- ******************************************************************************/
 
 #ifndef TESTMANAGER_H
 #define TESTMANAGER_H
@@ -47,6 +43,7 @@ typedef enum
     TEST_ERASE,
     TEST_BLANKCHECK,
     TEST_JOB,
+    TEST_BOUNDARY,
 
     TEST_ALL_GROUPS
 
@@ -73,7 +70,7 @@ typedef enum
     TEST_FAULT_USAGEFAULT
 } TestFaultType;
 
-#define TEST_MAX_GROUP_REPORTS     8u
+#define TEST_MAX_GROUP_REPORTS     10u
 #define TEST_MAX_CASE_REPORTS      96u
 #define TEST_REPORT_INVALID_INDEX  0xFFFFFFFFUL
 
@@ -149,13 +146,28 @@ extern volatile TestReportType g_TestReport;
 #define TEST_ENABLE_UART_OUTPUT       STD_ON
 #define TEST_ENABLE_UART_MENU         STD_ON
 
-/* Dành riêng một Flash sector đầy đủ cho test phá hủy dữ liệu (write/erase/blank-check).
- * Mặc định: sector 7 trên STM32F401RE (0x08060000 - 0x0807FFFF). */
+typedef struct {
+    uint8           SectorId;
+    Mem_AddressType SectorAddress;
+    Mem_LengthType  SectorLength;
+} TestSectorConfigType;
+
+typedef struct {
+    boolean         HasPrev;
+    Mem_AddressType PrevTailAddress;
+    boolean         HasNext;
+    Mem_AddressType NextHeadAddress;
+} TestNeighborBoundsType;
+
+extern TestSectorConfigType g_CurrentTestSector;
+
+/* Dành riêng một Flash sector cho test phá hủy dữ liệu (write/erase/blank-check).
+ * Có thể tùy chọn linh hoạt giữa Sector 3, 4, 5, 6, 7 (Mặc định: sector 7). */
 #define TEST_FLASH_INSTANCE           ((Mem_InstanceIdType)MEM_INDEX)
 #define TEST_FLASH_INVALID_INSTANCE   ((Mem_InstanceIdType)MEM_MAX_INSTANCES)
-#define TEST_FLASH_SECTOR_ADDRESS     ((Mem_AddressType)0x08060000UL)
-#define TEST_FLASH_SECTOR_LENGTH      ((Mem_LengthType)0x00020000UL)
-#define TEST_FLASH_WRITE_ADDRESS      ((Mem_AddressType)(TEST_FLASH_SECTOR_ADDRESS + 0x00000100UL))
+#define TEST_FLASH_SECTOR_ADDRESS     (g_CurrentTestSector.SectorAddress)
+#define TEST_FLASH_SECTOR_LENGTH      (g_CurrentTestSector.SectorLength)
+#define TEST_FLASH_WRITE_ADDRESS      ((Mem_AddressType)(g_CurrentTestSector.SectorAddress + 0x00000100UL))
 #define TEST_FLASH_COMPARE_LENGTH     ((Mem_LengthType)16u)
 #define TEST_FLASH_INVALID_ADDRESS    ((Mem_AddressType)(FLASH_IP_BASE_ADDRESS + FLASH_IP_TOTAL_SIZE))
 
@@ -166,8 +178,11 @@ extern volatile TestReportType g_TestReport;
 /* API                                                                       */
 /*===========================================================================*/
 
-void TestManager_Run(void);
-void TestManager_BeginGroup(TestGroupType group);
+void                   TestManager_Run(void);
+boolean                TestManager_SetTargetSector(uint8 sectorId);
+uint8                  TestManager_GetTargetSectorId(void);
+TestNeighborBoundsType TestManager_GetNeighborBounds(void);
+void                   TestManager_BeginGroup(TestGroupType group);
 void TestManager_RecordCaseTraceAt(
         uint32 caseId,
         const char* caseName,
