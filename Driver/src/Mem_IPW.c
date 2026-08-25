@@ -199,15 +199,3 @@ Std_ReturnType Mem_Ipw_BlankCheck(Mem_InstanceIdType InstanceId,
 
     return retVal;
 }
-
-/**
- * @brief Cancels the ongoing asynchronous hardware operation.
- * 
- * @param[in] InstanceId Identification of the memory instance.
- */
-void Mem_Ipw_Cancel(Mem_InstanceIdType InstanceId) 
-{
-    (void)InstanceId;
-
-    /* Hardware operation cancellation handled at Mem upper layer state machine */
-}

@@ -141,17 +141,6 @@ Std_ReturnType MemAcc_Erase(MemAcc_AddressAreaIdType addressAreaId, MemAcc_Addre
     return ret;
 }
 
-/* [SWS_MemAcc_10018] */
-void MemAcc_Cancel(MemAcc_AddressAreaIdType addressAreaId)
-{
-    if (addressAreaId < MEMACC_MAX_ADDRESS_AREAS && MemAcc_State[addressAreaId].Status == MEMACC_JOB_PENDING) {
-        MemAcc_State[addressAreaId].Status = MEMACC_JOB_IDLE;
-        MemAcc_State[addressAreaId].Result = MEMACC_CANCELED;
-        MemAcc_State[addressAreaId].CurrentJob = MEMACC_NO_JOB;
-        /* Nếu phần cứng có hỗ trợ hủy, gọi Mem_Cancel/Mem_Suspend ở đây (tùy hardware) */
-    }
-}
-
 /* [SWS_MemAcc_10017] */
 void MemAcc_MainFunction(void)
 {

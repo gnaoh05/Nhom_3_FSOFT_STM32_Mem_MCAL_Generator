@@ -58,6 +58,33 @@ void Fee_Init(const Fee_ConfigType *ConfigPtr)
 }
 
 /**
+ * @brief Service to de-initialize the FEE module.
+ */
+void Fee_DeInit(void)
+{
+    /* Kiểm tra nếu module chưa Init thì báo DET (nếu bật DET) */
+    if (Fee_ModuleStatus == MEMIF_UNINIT)
+    {
+#if (FEE_DEV_ERROR_DETECT == STD_ON)
+        Det_ReportError((uint16)FEE_MODULE_ID, (uint8)FEE_INSTANCE_ID, (uint8)FEE_SID_DEINIT, (uint8)FEE_E_UNINIT);
+#endif
+    }
+    else
+    {
+        /* Nếu đang có job bận ngầm bên dưới thì hủy tác vụ trên MemAcc */
+        if (Fee_ModuleStatus == MEMIF_BUSY)
+        {
+            MemAcc_Cancel((MemAcc_AddressAreaIdType)FEE_MEMACC_ADDRESS_AREA_ID);
+        }
+
+        /* Đưa toàn bộ trạng thái nội bộ về mặc định */
+        Fee_JobResult    = MEMIF_JOB_OK;
+        Fee_CurrentJob   = FEE_JOB_NONE;
+        Fee_ModuleStatus = MEMIF_UNINIT;
+    }
+}
+
+/**
  * @brief Service to switch operational mode (Fast/Slow) of underlying driver.
  */
 void Fee_SetMode(MemIf_ModeType Mode)

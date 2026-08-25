@@ -52,7 +52,4 @@ Std_ReturnType MemAcc_Read(MemAcc_AddressAreaIdType addressAreaId, MemAcc_Addres
 Std_ReturnType MemAcc_Write(MemAcc_AddressAreaIdType addressAreaId, MemAcc_AddressType targetAddress, const MemAcc_DataType* sourceDataPtr, MemAcc_LengthType length);
 Std_ReturnType MemAcc_Erase(MemAcc_AddressAreaIdType addressAreaId, MemAcc_AddressType targetAddress, MemAcc_LengthType length);
 
-/* Hàm hủy job */
-void MemAcc_Cancel(MemAcc_AddressAreaIdType addressAreaId);
-
 #endif /* MEMACC_H */

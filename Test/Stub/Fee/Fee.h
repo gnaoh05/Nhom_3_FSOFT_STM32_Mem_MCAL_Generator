@@ -31,6 +31,17 @@
  */
 void Fee_Init(const Fee_ConfigType *ConfigPtr);
 
+/* Thêm Service ID cho DeInit */
+#define FEE_SID_DEINIT                    (0x13U)
+
+/**
+ * @brief Service to de-initialize the FEE module.
+ * 
+ * @details Resets the internal state machine, cancels any pending jobs,
+ *          and transitions the module status back to MEMIF_UNINIT.
+ */
+void Fee_DeInit(void);
+
 /**
  * @brief Service to switch operational mode (Fast/Slow) of underlying driver.
  * @details [SWS_Fee_00086], [SWS_Fee_00020], [SWS_Fee_00121], [SWS_Fee_00170]
