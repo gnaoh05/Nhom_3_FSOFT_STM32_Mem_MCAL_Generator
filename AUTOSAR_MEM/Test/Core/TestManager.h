@@ -202,6 +202,7 @@ void TestManager_RecordCase(uint32 caseId, const char* caseName, boolean passed,
 void TestManager_EndGroup(void);
 void TestManager_Finish(void);
 void TestManager_ReportFault(TestFaultType fault);
+boolean TestManager_IsDebuggerConnected(void);
 
 void TestManager_PrepareDriver(void);
 void TestManager_ShutdownDriver(void);

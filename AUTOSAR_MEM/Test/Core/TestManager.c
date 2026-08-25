@@ -242,6 +242,11 @@ static void TestManager_PlatformInit(void)
     TestManager_UartInit();
 }
 
+boolean TestManager_IsDebuggerConnected(void)
+{
+    return ((STM32_CORE_DEBUG_DHCSR & STM32_CORE_DEBUG_DHCSR_C_DEBUGEN) != 0UL) ? TRUE : FALSE;
+}
+
 /*===========================================================================*/
 /* 3. DET ERROR STATE MANAGEMENT                                             */
 /*===========================================================================*/
@@ -875,34 +880,46 @@ void TestManager_Run(void)
     TestManager_PlatformInit();
 
 #if (TEST_ENABLE_UART_MENU == STD_ON) && (TEST_ENABLE_UART_OUTPUT == STD_ON)
-    TestManager_LogRunBanner();
-    TestManager_LogString("[MENU] Interactive UART selection is enabled.\n");
-
-    for (;;)
+    if (TestManager_IsDebuggerConnected() == FALSE)
     {
-        TestGroupType selection = TestManager_SelectGroupInteractive();
+        TestManager_LogRunBanner();
+        TestManager_LogString("[MENU] Interactive UART selection is enabled.\n");
 
-        if ((selection == TEST_WRITE) || (selection == TEST_ERASE) ||
-            (selection == TEST_BLANKCHECK) || (selection == TEST_BOUNDARY) ||
-            (selection == TEST_ALL_GROUPS))
+        for (;;)
         {
-            TestManager_SelectSectorInteractive();
+            TestGroupType selection = TestManager_SelectGroupInteractive();
+
+            if ((selection == TEST_WRITE) || (selection == TEST_ERASE) ||
+                (selection == TEST_BLANKCHECK) || (selection == TEST_BOUNDARY) ||
+                (selection == TEST_ALL_GROUPS))
+            {
+                TestManager_SelectSectorInteractive();
+            }
+
+            TestManager_ResetReport();
+            TestManager_LogString("[RUN] selected=");
+            TestManager_LogString(TestManager_GetGroupName(selection));
+            TestManager_LogString(" (Target Sector ");
+            TestManager_LogUnsigned((uint32)g_CurrentTestSector.SectorId);
+            TestManager_LogString(", Addr=");
+            TestManager_LogHex32((uint32)g_CurrentTestSector.SectorAddress);
+            TestManager_LogString(", Size=");
+            TestManager_LogHex32((uint32)g_CurrentTestSector.SectorLength);
+            TestManager_LogString(")\n");
+
+            TestManager_RunSelection(selection);
+            TestManager_Finish();
+            TestManager_LogString("[MENU] Run complete. Select next group.\n");
         }
-
+    }
+    else
+    {
+        /* Debugger is connected: bypass UART interactive blocking menu and run ACTIVE_TEST_GROUP */
         TestManager_ResetReport();
-        TestManager_LogString("[RUN] selected=");
-        TestManager_LogString(TestManager_GetGroupName(selection));
-        TestManager_LogString(" (Target Sector ");
-        TestManager_LogUnsigned((uint32)g_CurrentTestSector.SectorId);
-        TestManager_LogString(", Addr=");
-        TestManager_LogHex32((uint32)g_CurrentTestSector.SectorAddress);
-        TestManager_LogString(", Size=");
-        TestManager_LogHex32((uint32)g_CurrentTestSector.SectorLength);
-        TestManager_LogString(")\n");
-
-        TestManager_RunSelection(selection);
+        TestManager_LogRunBanner();
+        TestManager_LogString("[DEBUG] Debugger attached (C_DEBUGEN=1). Bypassing UART menu and running ACTIVE_TEST_GROUP.\n");
+        TestManager_RunSelection((TestGroupType)ACTIVE_TEST_GROUP);
         TestManager_Finish();
-        TestManager_LogString("[MENU] Run complete. Select next group.\n");
     }
 #else
     TestManager_ResetReport();

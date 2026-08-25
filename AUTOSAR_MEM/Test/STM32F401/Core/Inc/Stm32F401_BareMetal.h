@@ -127,6 +127,8 @@ typedef struct
 
 #define STM32_SCB_VTOR                    (*(volatile uint32*)0xE000ED08UL)
 #define STM32_SCB_CPACR                   (*(volatile uint32*)0xE000ED88UL)
+#define STM32_CORE_DEBUG_DHCSR            (*(volatile uint32*)0xE000EDF0UL)
+#define STM32_CORE_DEBUG_DHCSR_C_DEBUGEN  (1UL << 0)
 #define STM32_NVIC_ISER_BASE              ((volatile uint32*)0xE000E100UL)
 #define STM32_FLASH_IRQ_NUMBER            4u
 
