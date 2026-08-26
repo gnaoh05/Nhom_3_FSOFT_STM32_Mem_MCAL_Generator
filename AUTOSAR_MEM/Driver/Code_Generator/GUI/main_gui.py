@@ -918,10 +918,14 @@ class MemConfiguratorApp:
                 f.write(mem_c_content)
 
             # ============================================================
-            # 4. Generate Flash_IP_Cfg.c (chỉ include header, không cần template)
+            # 4. Generate Flash_IP_Cfg.c (từ templates/src)
             # ============================================================
+            template_flash_c = env_src.get_template("Flash_IP_Cfg.c.template")
+            flash_c_content = template_flash_c.render(
+                config=config
+            )
             with open(os.path.join(OUTPUT_DIR, "Flash_IP_Cfg.c"), 'w', encoding='utf-8') as f:
-                f.write('#include "Flash_IP_Cfg.h"\n')
+                f.write(flash_c_content)
 
             # ============================================================
             # Thông báo thành công
