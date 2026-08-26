@@ -221,6 +221,14 @@ boolean TestManager_BufferEquals(const Mem_DataType* lhs, const Mem_DataType* rh
 void TestManager_CopyFromFlash(Mem_AddressType sourceAddress, Mem_DataType* dest, Mem_LengthType length);
 boolean TestManager_IsFlashRangeErased(Mem_AddressType address, Mem_LengthType length);
 
+/* UART and Logging Services */
+void TestManager_LogString(const char* str);
+void TestManager_LogUnsigned(uint32 value);
+void TestManager_LogHex8(uint8 value);
+void TestManager_LogHex32(uint32 value);
+char TestManager_UartReadCharBlocking(void);
+void TestManager_UartWriteChar(char c);
+
 #ifdef __cplusplus
 }
 #endif

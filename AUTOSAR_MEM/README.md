@@ -178,7 +178,8 @@ AUTOSAR_MEM/
 │   │   ├── TestManager.h
 │   │   ├── Mem_Test_Traceability.md
 │   │   └── DEBUGGING.md
-│   ├── Testcase/               # 9 AUTOSAR Test Groups
+│   ├── Testcase/               # AUTOSAR Test Groups & Interactive Manual CLI
+│   │   ├── include/            # Testcase Headers (Init_Test.h, Manual_Test.h...)
 │   │   ├── Init_Test.c
 │   │   ├── Det_Test.c
 │   │   ├── Status_Test.c
@@ -187,7 +188,8 @@ AUTOSAR_MEM/
 │   │   ├── Erase_Test.c
 │   │   ├── BlankCheck_Test.c
 │   │   ├── Job_Test.c
-│   │   └── Boundary_Test.c
+│   │   ├── Boundary_Test.c
+│   │   └── Manual_Test.c       # Interactive Manual Command Shell
 │   ├── Stub/                   # Stub modules (Det, MemAcc, SchM, Std)
 │   └── Generated_File/         # Generated Configuration Headers
 └── README.md                   # Project Documentation
