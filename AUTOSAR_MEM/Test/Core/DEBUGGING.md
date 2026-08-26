@@ -34,3 +34,11 @@ Thêm `g_TestReport` vào cửa sổ **Expressions/Watch**. Các trường quan 
 Bạn có thể đặt breakpoint trực tiếp trong `Init_Test.c`, `Read_Test.c`,… rồi
 sửa input hoặc biến local trước khi lời gọi API được thực thi. Framework không
 tự dừng khi một case fail; nó tiếp tục chạy các testcase còn lại.
+
+## Giám sát bộ nhớ song song với STM32CubeProgrammer (HotPlug Mode)
+
+Để đối chứng dữ liệu Flash vật lý mà không làm gián đoạn quá trình Debug/UART:
+1. Mở **STM32CubeProgrammer**.
+2. Chọn kết nối **Mode: `Hot plug`** và bấm **Connect**.
+3. Tab **Memory & File edition**: Nhập Address `0x0800C000` (Sector 3) hoặc `0x08060000` (Sector 7), Size `0x100`.
+4. Bấm **Read** để xem dữ liệu thay đổi trực tiếp trên chip sau các lệnh Erase / Write.

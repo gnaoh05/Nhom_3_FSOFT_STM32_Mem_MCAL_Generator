@@ -434,10 +434,6 @@ void Mem_MainFunction(void) {
 
     uint8 i;
     for (i = 0; i < MEM_MAX_INSTANCES; i++) {
-        
-        /* Chạy hàm ngầm mô phỏng của phần cứng trước để cập nhật Timer/Cờ */
-        Mem_Ipw_MainFunction(i);
-
         if (Mem_JobResults[i] == MEM_JOB_PENDING) {
             
             Mem_Ipw_StatusType ipwStatus = Mem_Ipw_GetStatus(i);
@@ -514,7 +510,10 @@ void Mem_MainFunction(void) {
                 }
                 Mem_JobContext[i].Action = MEM_JOB_ACTION_IDLE; /* Hủy bỏ Job */
             }
-            /* Còn nếu ipwStatus == MEM_IPW_BUSY -> CORE KHÔNG LÀM GÌ CẢ (Chờ MainFunction chu kỳ sau) */
+            else
+            {
+                /* MEM_IPW_BUSY: Phần cứng đang bận, chờ MainFunction ở chu kỳ lập lịch tiếp theo */
+            }
         }
     }
 }

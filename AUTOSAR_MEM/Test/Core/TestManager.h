@@ -45,7 +45,8 @@ typedef enum
     TEST_JOB,
     TEST_BOUNDARY,
 
-    TEST_ALL_GROUPS
+    TEST_ALL_GROUPS,
+    TEST_MANUAL_CLI
 
 } TestGroupType;
 

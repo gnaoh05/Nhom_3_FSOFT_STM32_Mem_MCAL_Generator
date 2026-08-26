@@ -16,12 +16,6 @@
 void Mem_Ipw_Init(const Mem_ConfigType *ConfigPtr);
 
 /**
- * @brief Link-time compatibility tick required by Mem_MainFunction.
- *        Runtime behavior has not been validated in this integration step.
- */
-void Mem_Ipw_MainFunction(Mem_InstanceIdType InstanceId);
-
-/**
  * @brief Retrieves the current busy/idle execution status of the underlying Flash hardware.
  * 
  * @param[in] InstanceId Identification of the memory instance.

@@ -25,62 +25,82 @@ Requirement chỉ liên quan cấu hình, chỉ compile-time, chỉ review hoặ
   - kiểm tra cô lập Sector lân cận (Snapshot Erase) và mép biên an toàn
   - optional service không hỗ trợ
 
-## Danh Sách Testcase
+## Danh Sách 54 Testcase (Mã hiển thị & Mã Hex)
 
-- `0x0101` `JobResultAfterInit`
-- `0x0102` `VersionInfoMatches`
-- `0x0103` `InitRejectsNonNullConfig`
-- `0x0104` `VersionInfoRejectsNullPointer`
-- `0x0105` `DeInitTransitionsToUninit`
-- `0x0201` `ReadBeforeInit`
-- `0x0202` `ReadNullPointer`
-- `0x0203` `ReadInvalidAddress`
-- `0x0204` `ReadInvalidLength`
-- `0x0205` `ReadInvalidInstance`
-- `0x0301` `InitialJobResultOk`
-- `0x0302` `AcceptedReadSetsPending`
-- `0x0303` `ReadCompletesWithOk`
-- `0x0304` `GetJobResultInvalidInstance`
-- `0x0305` `RejectedReadKeepsJobResultOk`
-- `0x0401` `ReadValidAddress`
-- `0x0402` `ReadRejectsInvalidAddress`
-- `0x0403` `ReadRejectsInvalidLength`
-- `0x0404` `ReadRejectsInvalidInstance`
-- `0x0405` `ReadRejectsPendingRequest`
-- `0x0501` `WriteValidPattern`
-- `0x0502` `WriteRejectsInvalidAddress`
-- `0x0503` `WriteRejectsInvalidInstance`
-- `0x0504` `WriteRejectsNullPointer`
-- `0x0505` `WriteRejectsInvalidLength`
-- `0x0506` `WriteRejectsPendingJob`
-- `0x0601` `EraseValidSector`
-- `0x0602` `EraseRejectsMisalignedRequest`
-- `0x0603` `EraseRejectsInvalidAddress`
-- `0x0604` `EraseRejectsInvalidInstance`
-- `0x0605` `EraseRejectsInvalidLength`
-- `0x0606` `EraseRejectsPendingJob`
-- `0x0701` `BlankSectorReturnsOk`
-- `0x0702` `NonBlankSectorReturnsInconsistent`
-- `0x0703` `BlankCheckRejectsInvalidInstance`
-- `0x0704` `BlankCheckRejectsInvalidAddress`
-- `0x0705` `BlankCheckRejectsInvalidLength`
-- `0x0706` `BlankCheckRejectsPendingJob`
-- `0x0801` `RejectSecondPendingJob`
-- `0x0802` `PropagateErrorCancelsJob`
-- `0x0803` `HwSpecificServiceNotAvailable`
-- `0x0804` `SuspendNotAvailable`
-- `0x0805` `ResumeNotAvailable`
-- `0x0806` `PropagateErrorInvalidInstance`
-- `0x0807` `HwSpecificRejectsInvalidInstance`
-- `0x0808` `HwSpecificRejectsNullDataPtr`
-- `0x0809` `HwSpecificRejectsNullLengthPtr`
-- `0x0810` `SuspendRejectsInvalidInstance`
-- `0x0811` `ResumeRejectsInvalidInstance`
-- `0x0901` `EraseNeighborIsolation`
-- `0x0902` `WriteLowerBoundary`
-- `0x0903` `WriteUpperBoundary`
-- `0x0904` `ReadBoundaryEdges`
-- `0x0905` `BoundaryRejectsInvalidAddress`
+### Nhóm 1: INIT Group (Initialization & Version Info)
+- `101` (`0x0101`) `JobResultAfterInit`
+- `102` (`0x0102`) `VersionInfoMatches`
+- `103` (`0x0103`) `InitRejectsNonNullConfig`
+- `104` (`0x0104`) `VersionInfoRejectsNullPointer`
+- `105` (`0x0105`) `DeInitTransitionsToUninit`
+
+### Nhóm 2: DET Group (Parameter Validation & DET Reporting)
+- `201` (`0x0201`) `ReadBeforeInit`
+- `202` (`0x0202`) `ReadNullPointer`
+- `203` (`0x0203`) `ReadInvalidAddress`
+- `204` (`0x0204`) `ReadInvalidLength`
+- `205` (`0x0205`) `ReadInvalidInstance`
+
+### Nhóm 3: STATUS Group (Job State Machine & Transitions)
+- `301` (`0x0301`) `InitialJobResultOk`
+- `302` (`0x0302`) `AcceptedReadSetsPending`
+- `303` (`0x0303`) `ReadCompletesWithOk`
+- `304` (`0x0304`) `GetJobResultInvalidInstance`
+- `305` (`0x0305`) `RejectedReadKeepsJobResultOk`
+
+### Nhóm 4: READ Group (Flash Read & Data Integrity)
+- `401` (`0x0401`) `ReadValidAddress`
+- `402` (`0x0402`) `ReadRejectsInvalidAddress`
+- `403` (`0x0403`) `ReadRejectsInvalidLength`
+- `404` (`0x0404`) `ReadRejectsInvalidInstance`
+- `405` (`0x0405`) `ReadRejectsPendingRequest`
+
+### Nhóm 5: WRITE Group (Flash Programming & Read-Back Verification)
+- `501` (`0x0501`) `WriteValidPattern`
+- `502` (`0x0502`) `WriteRejectsInvalidAddress`
+- `503` (`0x0503`) `WriteRejectsInvalidInstance`
+- `504` (`0x0504`) `WriteRejectsNullPointer`
+- `505` (`0x0505`) `WriteRejectsInvalidLength`
+- `506` (`0x0506`) `WriteRejectsPendingJob`
+
+### Nhóm 6: ERASE Group (Sector Erase & Alignment Validation)
+- `601` (`0x0601`) `EraseValidSector`
+- `602` (`0x0602`) `EraseRejectsMisalignedRequest`
+- `603` (`0x0603`) `EraseRejectsInvalidAddress`
+- `604` (`0x0604`) `EraseRejectsInvalidInstance`
+- `605` (`0x0605`) `EraseRejectsInvalidLength`
+- `606` (`0x0606`) `EraseRejectsPendingJob`
+
+### Nhóm 7: BLANKCHECK Group (Blank Check Verification)
+- `701` (`0x0701`) `BlankSectorReturnsOk`
+- `702` (`0x0702`) `NonBlankSectorReturnsInconsistent`
+- `703` (`0x0703`) `BlankCheckRejectsInvalidInstance`
+- `704` (`0x0704`) `BlankCheckRejectsInvalidAddress`
+- `705` (`0x0705`) `BlankCheckRejectsInvalidLength`
+- `706` (`0x0706`) `BlankCheckRejectsPendingJob`
+
+### Nhóm 8: JOB Group (Single Job Queue & Optional Services)
+- `801` (`0x0801`) `RejectSecondPendingJob`
+- `802` (`0x0802`) `PropagateErrorCancelsJob`
+- `803` (`0x0803`) `HwSpecificServiceNotAvailable`
+- `804` (`0x0804`) `SuspendNotAvailable`
+- `805` (`0x0805`) `ResumeNotAvailable`
+- `806` (`0x0806`) `PropagateErrorInvalidInstance`
+- `807` (`0x0807`) `HwSpecificRejectsInvalidInstance`
+- `808` (`0x0808`) `HwSpecificRejectsNullDataPtr`
+- `809` (`0x0809`) `HwSpecificRejectsNullLengthPtr`
+- `810` (`0x0810`) `SuspendRejectsInvalidInstance`
+- `811` (`0x0811`) `ResumeRejectsInvalidInstance`
+
+### Nhóm 9: BOUNDARY Group (Neighbor Sector Snapshot Isolation & Edge Integrity)
+- `901` (`0x0901`) `EraseNeighborIsolation`
+- `902` (`0x0902`) `WriteLowerBoundary`
+- `903` (`0x0903`) `WriteUpperBoundary`
+- `904` (`0x0904`) `ReadBoundaryEdges`
+- `905` (`0x0905`) `BoundaryRejectsInvalidAddress`
+
+### Chế độ Bổ trợ: Interactive Manual CLI (Phím M)
+- Hỗ trợ kiểm thử trực tiếp bằng tay với tham số tùy chọn (Address, Length, Byte Pattern, Sector ID), xác thực Read-Back Verification và hiển thị Hex Dump 16 cột + ASCII View.
 
 ## Requirement Coverage Matrix
 
