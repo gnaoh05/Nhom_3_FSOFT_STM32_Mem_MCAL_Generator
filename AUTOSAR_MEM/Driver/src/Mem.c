@@ -43,10 +43,41 @@ typedef enum {
     MEM_OP_BLANKCHECK
 } Mem_OperationType;
 
-/*
- * Hàm Helper: Kiểm tra Bounds, Alignment VÀ trả về ChunkSize
+/* 
+ * Khai báo biến cấu hình toàn cục. 
+ * Biến này SẼ ĐƯỢC SINH TỰ ĐỘNG trong file Mem_Cfg.c bởi Tool GUI.
  */
-static uint8 Mem_ValidateAddressAndLength(Mem_InstanceIdType instanceId, Mem_AddressType address, Mem_LengthType length, Mem_OperationType opType, uint32* outChunkSize) {
+extern const Mem_ConfigType Mem_ConfigData;
+
+/*
+ * Hàm Helper nội bộ: Lấy kích thước gói xử lý (ChunkSize) từ Cấu hình Sector Batches.
+ * Phục vụ việc chia nhỏ Job trong Mem_MainFunction (hoạt động trong mọi chế độ STD_ON / STD_OFF).
+ */
+static Mem_LengthType Mem_GetChunkSize(Mem_InstanceIdType instanceId, Mem_AddressType address, Mem_OperationType opType) {
+    uint16 i;
+    for (i = 0; i < Mem_ConfigData.MemInstances[instanceId].MemNumberOfBatches; i++) {
+        uint32 batchStart = Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemStartAddress;
+        uint32 batchSize  = Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemNumberOfSectors * 
+                            Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemEraseSectorSize;
+
+        if ((address >= batchStart) && (address < (batchStart + batchSize))) {
+            if (opType == MEM_OP_WRITE) {
+                return Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemWritePageSize;
+            } else if ((opType == MEM_OP_ERASE) || (opType == MEM_OP_BLANKCHECK)) {
+                return Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemEraseSectorSize;
+            } else { /* MEM_OP_READ */
+                return Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemMinReadSize;
+            }
+        }
+    }
+    return 1u; /* Giá trị fallback an toàn */
+}
+
+#if (MEM_DEV_ERROR_DETECT == STD_ON)
+/*
+ * Hàm Helper: Kiểm tra Bounds và Alignment địa chỉ/chiều dài phục vụ bắt lỗi DET
+ */
+static uint8 Mem_ValidateAddressAndLength(Mem_InstanceIdType instanceId, Mem_AddressType address, Mem_LengthType length, Mem_OperationType opType) {
     uint16 i;
     uint32 batchStart, batchSize, batchEnd;
     uint32 requiredAlignment = 1u;
@@ -82,27 +113,12 @@ static uint8 Mem_ValidateAddressAndLength(Mem_InstanceIdType instanceId, Mem_Add
                 return MEM_E_PARAM_LENGTH;
             }
             
-            if (outChunkSize != NULL) {
-                if (opType == MEM_OP_BLANKCHECK) {
-                    *outChunkSize = Mem_ConfigData.MemInstances[instanceId].MemSectorBatches[i].MemEraseSectorSize;
-                } else {
-                    *outChunkSize = requiredAlignment; 
-                }
-            }
             return 0u; 
         }
     }
     return MEM_E_PARAM_ADDRESS; 
 }
-/* -------------------------------------------------------------------------
- * NHÓM HÀM SYNCHRONOUS
- * ------------------------------------------------------------------------- */
-
-/* 
- * Khai báo biến cấu hình toàn cục. 
- * Biến này SẼ ĐƯỢC SINH TỰ ĐỘNG trong file Mem_Cfg.c bởi Tool GUI.
- */
-extern const Mem_ConfigType Mem_ConfigData; 
+#endif 
 
 void Mem_Init(const Mem_ConfigType* configPtr) {
 #if (MEM_DEV_ERROR_DETECT == STD_ON)
@@ -260,8 +276,7 @@ Std_ReturnType Mem_Read(Mem_InstanceIdType instanceId, Mem_AddressType sourceAdd
     }
     
     /* [SWS_Mem_00072] Kiểm tra lỗi địa chỉ, độ dài vô nghĩa hoặc sai căn lề */
-    uint32 chunkSz = 0;
-    valErr = Mem_ValidateAddressAndLength(instanceId, sourceAddress, length, MEM_OP_READ, &chunkSz);
+    valErr = Mem_ValidateAddressAndLength(instanceId, sourceAddress, length, MEM_OP_READ);
     if (valErr != 0u) {
         Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_READ_ID, valErr);
         return E_NOT_OK;
@@ -280,7 +295,7 @@ Std_ReturnType Mem_Read(Mem_InstanceIdType instanceId, Mem_AddressType sourceAdd
     Mem_JobContext[instanceId].CurrentAddress = sourceAddress;
     Mem_JobContext[instanceId].CurrentDataPtr = destinationDataPtr;
     Mem_JobContext[instanceId].RemainingLength = length;
-    Mem_JobContext[instanceId].ChunkSize = chunkSz; /* Nạp kích thước chia nhỏ */
+    Mem_JobContext[instanceId].ChunkSize = Mem_GetChunkSize(instanceId, sourceAddress, MEM_OP_READ);
     
     return E_OK;
 }
@@ -304,8 +319,7 @@ Std_ReturnType Mem_Write(Mem_InstanceIdType instanceId, Mem_AddressType targetAd
     }
     
     /* [SWS_Mem_00012] Kiểm tra lỗi địa chỉ, độ dài vô nghĩa hoặc sai căn lề */
-    uint32 chunkSz = 0;
-    valErr = Mem_ValidateAddressAndLength(instanceId, targetAddress, length, MEM_OP_WRITE, &chunkSz);
+    valErr = Mem_ValidateAddressAndLength(instanceId, targetAddress, length, MEM_OP_WRITE);
     if (valErr != 0u) {
         Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_WRITE_ID, valErr);
         return E_NOT_OK;
@@ -313,7 +327,7 @@ Std_ReturnType Mem_Write(Mem_InstanceIdType instanceId, Mem_AddressType targetAd
 
     /* [SWS_Mem_00013] Đảm bảo tính độc quyền tiến trình */
     if (Mem_JobResults[instanceId] == MEM_JOB_PENDING) {
-        Det_ReportError(MEM_MODULE_ID, instanceId, MEM_WRITE_ID, MEM_E_JOB_PENDING);
+        Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_WRITE_ID, MEM_E_JOB_PENDING);
         return E_NOT_OK;
     }
 #endif
@@ -324,7 +338,7 @@ Std_ReturnType Mem_Write(Mem_InstanceIdType instanceId, Mem_AddressType targetAd
     Mem_JobContext[instanceId].CurrentAddress = targetAddress;
     Mem_JobContext[instanceId].CurrentWriteDataPtr = sourceDataPtr;
     Mem_JobContext[instanceId].RemainingLength = length;
-    Mem_JobContext[instanceId].ChunkSize = chunkSz;
+    Mem_JobContext[instanceId].ChunkSize = Mem_GetChunkSize(instanceId, targetAddress, MEM_OP_WRITE);
     
     return E_OK;
 }
@@ -343,8 +357,7 @@ Std_ReturnType Mem_Erase(Mem_InstanceIdType instanceId, Mem_AddressType targetAd
     }
     
     /* [SWS_Mem_00017] Kiểm tra lỗi địa chỉ, độ dài vô nghĩa hoặc sai căn lề */
-    uint32 chunkSz = 0;
-    valErr = Mem_ValidateAddressAndLength(instanceId, targetAddress, length, MEM_OP_ERASE, &chunkSz);
+    valErr = Mem_ValidateAddressAndLength(instanceId, targetAddress, length, MEM_OP_ERASE);
     if (valErr != 0u) {
         Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_ERASE_ID, valErr);
         return E_NOT_OK;
@@ -362,7 +375,7 @@ Std_ReturnType Mem_Erase(Mem_InstanceIdType instanceId, Mem_AddressType targetAd
     Mem_JobContext[instanceId].Action = MEM_JOB_ACTION_ERASE;
     Mem_JobContext[instanceId].CurrentAddress = targetAddress;
     Mem_JobContext[instanceId].RemainingLength = length;
-    Mem_JobContext[instanceId].ChunkSize = chunkSz;
+    Mem_JobContext[instanceId].ChunkSize = Mem_GetChunkSize(instanceId, targetAddress, MEM_OP_ERASE);
     
     return E_OK;
 }
@@ -381,8 +394,7 @@ Std_ReturnType Mem_BlankCheck(Mem_InstanceIdType instanceId, Mem_AddressType tar
     }
     
     /* [SWS_Mem_00024] Kiểm tra lỗi địa chỉ, độ dài vô nghĩa hoặc sai căn lề (Dùng quy tắc READ) */
-    uint32 chunkSz = 0;
-    valErr = Mem_ValidateAddressAndLength(instanceId, targetAddress, length, MEM_OP_BLANKCHECK, &chunkSz);
+    valErr = Mem_ValidateAddressAndLength(instanceId, targetAddress, length, MEM_OP_BLANKCHECK);
     if (valErr != 0u) {
         Det_ReportError(MEM_MODULE_ID, MEM_INDEX, MEM_BLANKCHECK_ID, valErr);
         return E_NOT_OK;
@@ -400,7 +412,7 @@ Std_ReturnType Mem_BlankCheck(Mem_InstanceIdType instanceId, Mem_AddressType tar
     Mem_JobContext[instanceId].Action = MEM_JOB_ACTION_BLANKCHECK;
     Mem_JobContext[instanceId].CurrentAddress = targetAddress;
     Mem_JobContext[instanceId].RemainingLength = length;
-    Mem_JobContext[instanceId].ChunkSize = chunkSz;
+    Mem_JobContext[instanceId].ChunkSize = Mem_GetChunkSize(instanceId, targetAddress, MEM_OP_BLANKCHECK);
     
     return E_OK;
 }
