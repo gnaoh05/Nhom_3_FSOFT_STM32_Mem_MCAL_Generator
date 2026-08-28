@@ -3,6 +3,7 @@
 .launches/
 /.cproject
 /.project
+/.vscode
 
 # 2. Thư mục chứa kết quả Build (không nên đẩy lên Git vì mỗi máy tự build được)
 Debug/
